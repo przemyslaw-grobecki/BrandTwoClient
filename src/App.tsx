@@ -1,3 +1,4 @@
+import { BrandClientContextProvider } from 'components/Providers/BrandClientContext'
 import SignInPage from 'pages/SignInPage'
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -7,10 +8,12 @@ function App() {
 
   return (
     <div>
-      <Routes>
-        <Route path="/signin" element={<SignInPage/>}/>
-        <Route path="/*" element={<Navigate to="/signin" />}/>
-      </Routes>
+      <BrandClientContextProvider>
+        <Routes>
+          <Route path="/signin" element={<SignInPage/>}/>
+          <Route path="/*" element={<Navigate to="/signin" />}/>
+        </Routes>
+      </BrandClientContextProvider>
     </div>
   )
 }
