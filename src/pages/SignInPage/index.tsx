@@ -1,4 +1,6 @@
 import React from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
@@ -18,17 +20,24 @@ import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { BrandClient } from "client/BrandClient";
 
 const SignInPage: React.FC = () => {
-  const client : BrandClient = useBrandClientContext().client;
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const email = data.get("email") as string;
-    const password = data.get("password") as string;
-    console.log({
-      email,
-      password,
-    });
-  };
+  const client: BrandClient = useBrandClientContext().client;
+
+  const validationSchema = Yup.object({
+    email: Yup.string().email("Invalid email address").required("Email is required"),
+    password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values) => {
+      let response = await client.Login(values.email, values.password);
+      console.log(response);
+    },
+  });
 
   return (
     <>
@@ -97,7 +106,7 @@ const SignInPage: React.FC = () => {
             >
               <Box
                 component="form"
-                onSubmit={handleSubmit}
+                onSubmit={formik.handleSubmit}
                 noValidate
                 sx={{ mt: 1 }}
               >
@@ -110,6 +119,11 @@ const SignInPage: React.FC = () => {
                   name="email"
                   autoComplete="email"
                   autoFocus
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.email && Boolean(formik.errors.email)}
+                  helperText={formik.touched.email && formik.errors.email}
                 />
                 <TextField
                   margin="normal"
@@ -120,6 +134,11 @@ const SignInPage: React.FC = () => {
                   type="password"
                   id="password"
                   autoComplete="current-password"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.password && Boolean(formik.errors.password)}
+                  helperText={formik.touched.password && formik.errors.password}
                 />
                 <FormControlLabel
                   control={<Checkbox value="remember" color="primary" />}

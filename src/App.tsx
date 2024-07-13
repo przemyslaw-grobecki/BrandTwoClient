@@ -1,4 +1,5 @@
 import { BrandClientContextProvider } from 'components/Providers/BrandClientContext'
+import AdminPanel from 'pages/AdminPanel'
 import SignInPage from 'pages/SignInPage'
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -10,8 +11,9 @@ function App() {
     <div>
       <BrandClientContextProvider>
         <Routes>
-          <Route path="/signin" element={<SignInPage/>}/>
-          <Route path="/*" element={<Navigate to="/signin" />}/>
+          <Route path="/signin" element={<AdminPanel/>}/>
+          <Route path="/" element={<Navigate to="/signin"/>}/>
+          {/* <Route path="/*" element={<Navigate to="/signin" />}/> */}
         </Routes>
       </BrandClientContextProvider>
     </div>
