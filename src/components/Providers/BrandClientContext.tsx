@@ -1,10 +1,13 @@
 import { BrandClient } from 'client/BrandClient';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import developmentSettings from 'development-settings.json';
+import { BrandClientTokenInfo } from 'client/BrandClientConnectionInfo';
 
 // Define the shape of the context state
 interface BrandClientContextState {
   client: BrandClient;
+  brandClientTokenInfo: BrandClientTokenInfo | undefined
+  setBrandClientTokenInfo: React.Dispatch<React.SetStateAction<BrandClientTokenInfo | undefined>>
 }
 
 // Create the context with a default value
@@ -15,10 +18,11 @@ interface BrandClientContextProviderProps {
 }
   
 export const BrandClientContextProvider: React.FC<BrandClientContextProviderProps> = ({ children }) => {
-    const [client, _] = useState<BrandClient>(new BrandClient(developmentSettings.gateway));
+    const client = new BrandClient(developmentSettings.gateway);
+    const [brandClientTokenInfo, setBrandClientTokenInfo] = useState<BrandClientTokenInfo | undefined>(undefined);
 
     return (
-        <BrandClientContext.Provider value={{ client }}>
+        <BrandClientContext.Provider value={{ client, brandClientTokenInfo, setBrandClientTokenInfo }}>
             {children}
         </BrandClientContext.Provider>
     );

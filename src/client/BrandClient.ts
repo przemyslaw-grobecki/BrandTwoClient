@@ -7,9 +7,8 @@ import moment from "moment";
 
 
 export class BrandClient implements IAuthenticationApi {
-  private gatewayPath: string;
-  private tokenInfo: BrandClientTokenInfo | undefined;
-  private clientConfig: AxiosRequestConfig = {
+  private readonly gatewayPath: string;
+  private readonly clientConfig: AxiosRequestConfig = {
     headers: {
       accept: "application/json",
       "Content-Type": "application/json",
@@ -20,6 +19,10 @@ export class BrandClient implements IAuthenticationApi {
     this.gatewayPath = gatewayPath;
   }
 
+  IsClientAuthenticated: (connectionInfo: BrandClientTokenInfo | undefined) => boolean = (connectionInfo: BrandClientTokenInfo | undefined) => {
+    return connectionInfo?.token !== undefined;
+  };
+
   ///
   /// Authentication
   ///
@@ -27,7 +30,7 @@ export class BrandClient implements IAuthenticationApi {
     email: string,
     password: string,
     useCookies?: boolean
-  ) => Promise<void> = async (
+  ) => Promise<BrandClientTokenInfo | undefined> = async (
     email: string,
     password: string,
     useCookies: boolean = false
@@ -42,12 +45,13 @@ export class BrandClient implements IAuthenticationApi {
         },
         this.clientConfig
       );
-      this.tokenInfo = {
-        type: response.data.type,
+      const tokenInfo = {
+        tokenType: response.data.tokenType,
         token: response.data.accessToken,
         refreshToken: response.data.refreshToken,
         expirationTime: moment().add(response.data.expiresIn, 'seconds').toISOString()
-      };
+      } as BrandClientTokenInfo;
+      return tokenInfo;
     } catch (error) {
       console.log(error);
     }

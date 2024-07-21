@@ -1,21 +1,20 @@
-import { BrandClientContextProvider } from 'components/Providers/BrandClientContext'
+import { BrandClientContextProvider, useBrandClientContext } from 'components/Providers/BrandClientContext'
 import AdminPanel from 'pages/AdminPanel'
 import SignInPage from 'pages/SignInPage'
 import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { client, brandClientTokenInfo } = useBrandClientContext();
 
   return (
     <div>
-      <BrandClientContextProvider>
         <Routes>
-          <Route path="/signin" element={<AdminPanel/>}/>
+          <Route path="/signin" element={!client.IsClientAuthenticated(brandClientTokenInfo) ? <SignInPage/> : <Navigate to="/home"/>}/>
           <Route path="/" element={<Navigate to="/signin"/>}/>
+          <Route path="/home" element={client.IsClientAuthenticated(brandClientTokenInfo) ? <AdminPanel/> : <Navigate to="/signin"/>}/>
           {/* <Route path="/*" element={<Navigate to="/signin" />}/> */}
         </Routes>
-      </BrandClientContextProvider>
     </div>
   )
 }

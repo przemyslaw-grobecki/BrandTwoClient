@@ -1,5 +1,5 @@
 export type BrandClientTokenInfo = {
-    type: string,
+    tokenType: string,
     token: string,
     refreshToken: string,
     expirationTime: string,

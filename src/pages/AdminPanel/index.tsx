@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, AppBar, Toolbar, Typography, Box, IconButton } from '@mui/material';
-import { Devices, People, Science, Archive, Menu as MenuIcon } from '@mui/icons-material';
+import { Drawer, List, ListItem, ListItemIcon, ListItemText, AppBar, Toolbar, Typography, Box, IconButton, Divider } from '@mui/material';
+import { Devices, People, Science, Archive, Menu as MenuIcon, ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { styled, useTheme } from '@mui/material/styles';
 import DevicesPage from '../DevicesPage';
 import UsersPage from '../UsersPage';
 import ExperimentsPage from '../ExperimentsPage';
@@ -10,7 +11,8 @@ const drawerWidth = 240;
 
 const AdminPanel: React.FC = () => {
   const [selectedPage, setSelectedPage] = useState('devices');
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+  const theme = useTheme();
 
   const renderPage = () => {
     switch (selectedPage) {
@@ -32,18 +34,9 @@ const AdminPanel: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', position: 'relative' }}>
       <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, ...(drawerOpen && { display: 'none' }) }}
-          >
-            <MenuIcon />
-          </IconButton>
           <Typography variant="h6" noWrap>
             Admin Panel
           </Typography>
@@ -53,9 +46,9 @@ const AdminPanel: React.FC = () => {
         variant="persistent"
         open={drawerOpen}
         sx={{
-          width: drawerWidth,
+          width: drawerOpen ? drawerWidth : theme.spacing(7) + 1,
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          [`& .MuiDrawer-paper`]: { width: drawerOpen ? drawerWidth : theme.spacing(7) + 1, boxSizing: 'border-box' },
         }}
       >
         <Toolbar />
@@ -78,14 +71,32 @@ const AdminPanel: React.FC = () => {
           </ListItem>
         </List>
       </Drawer>
+      <IconButton
+          color="inherit"
+          onClick={handleDrawerToggle}
+          sx={{ 
+            position: 'absolute', 
+            top: '50vh', 
+            left: drawerOpen ? `${drawerWidth-50}px` : `${theme.spacing(7) + 1}px`,
+            transform: 'translateY(-50%)',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: 'none',
+            },
+            zIndex: theme.zIndex.drawer + 2,
+          }}
+        >
+          {drawerOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+      </IconButton>
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           bgcolor: 'background.default',
           p: 3,
-          marginLeft: drawerOpen ? `${drawerWidth}px` : 0,
           transition: 'margin-left 0.3s',
+          marginLeft: drawerOpen ? `${drawerWidth}px` : `${theme.spacing(7) + 1}px`,
         }}
       >
         <Toolbar />

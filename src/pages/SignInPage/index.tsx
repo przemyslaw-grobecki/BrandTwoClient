@@ -20,7 +20,7 @@ import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { BrandClient } from "client/BrandClient";
 
 const SignInPage: React.FC = () => {
-  const client: BrandClient = useBrandClientContext().client;
+  const { client, brandClientTokenInfo, setBrandClientTokenInfo} = useBrandClientContext();
 
   const validationSchema = Yup.object({
     email: Yup.string().email("Invalid email address").required("Email is required"),
@@ -35,6 +35,7 @@ const SignInPage: React.FC = () => {
     validationSchema: validationSchema,
     onSubmit: async (values) => {
       let response = await client.Login(values.email, values.password);
+      setBrandClientTokenInfo(response);
       console.log(response);
     },
   });
