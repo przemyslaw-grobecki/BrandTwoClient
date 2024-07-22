@@ -68,8 +68,8 @@ export class BrandClient implements IAuthenticationApi {
     console.log(response);
   };
 
-  public getDevicesApi: () => IDevicesApi = () => {
-    return new DevicesApi(this.gatewayPath);
+  public getDevicesApi: (brandClientTokenInfo: BrandClientTokenInfo) => IDevicesApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new DevicesApi(this.gatewayPath, brandClientTokenInfo);
   };
 
   // public getIdentityApi : () => IIdentityApi = () => {

@@ -1,3 +1,5 @@
 export type Device = {
-    id: string;
+    deviceId: string;
+    occupiedComPort: string;
+    connectionType: string;
 }

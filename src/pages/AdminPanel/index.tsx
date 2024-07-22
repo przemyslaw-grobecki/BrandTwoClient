@@ -95,8 +95,8 @@ const AdminPanel: React.FC = () => {
           flexGrow: 1,
           bgcolor: 'background.default',
           p: 3,
-          transition: 'margin-left 0.3s',
-          marginLeft: drawerOpen ? `${drawerWidth}px` : `${theme.spacing(7) + 1}px`,
+          transition: 'margin-right 3.3s',
+          marginLeft: drawerOpen ? `${0}px` : `${theme.spacing(7) + 1}px`,
         }}
       >
         <Toolbar />
