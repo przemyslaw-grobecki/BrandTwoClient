@@ -13,7 +13,7 @@ function App() {
           <Route path="/signin" element={!client.IsClientAuthenticated(brandClientTokenInfo) ? <SignInPage/> : <Navigate to="/home"/>}/>
           <Route path="/" element={<Navigate to="/signin"/>}/>
           <Route path="/home" element={client.IsClientAuthenticated(brandClientTokenInfo) ? <AdminPanel/> : <Navigate to="/signin"/>}/>
-          {/* <Route path="/*" element={<Navigate to="/signin" />}/> */}
+          {/* <Route path="/*" element={<AdminPanel/>}/> */}
         </Routes>
     </div>
   )

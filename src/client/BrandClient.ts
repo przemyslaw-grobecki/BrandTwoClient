@@ -4,6 +4,8 @@ import { BrandClientTokenInfo } from "client/BrandClientConnectionInfo";
 import { IAuthenticationApi } from "client/Identity/IAuthenticationApi";
 import axios, { AxiosRequestConfig } from "axios";
 import moment from "moment";
+import { AuthorizedResourcesApi } from "./AuthorizedResources/AuthorizedResourcesApi";
+import { IAuthorizedResourcesApi } from "./AuthorizedResources/IAuthorizedResourcesApi";
 
 
 export class BrandClient implements IAuthenticationApi {
@@ -72,6 +74,10 @@ export class BrandClient implements IAuthenticationApi {
     return new DevicesApi(this.gatewayPath, brandClientTokenInfo);
   };
 
+  public getAuthorizedResourcesApi: (brandClientTokenInfo: BrandClientTokenInfo) => IAuthorizedResourcesApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new AuthorizedResourcesApi(this.gatewayPath, brandClientTokenInfo);
+  };
+  
   // public getIdentityApi : () => IIdentityApi = () => {
   //     return new IdentityApi(this.gatewayPath);
   // }
