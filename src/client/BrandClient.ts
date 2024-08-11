@@ -6,6 +6,10 @@ import axios, { AxiosRequestConfig } from "axios";
 import moment from "moment";
 import { AuthorizedResourcesApi } from "./AuthorizedResources/AuthorizedResourcesApi";
 import { IAuthorizedResourcesApi } from "./AuthorizedResources/IAuthorizedResourcesApi";
+import { IUsersApi } from "./Identity/IUsersApi";
+import { UsersApi } from "./Identity/UsersApi";
+import { IRolesApi } from "./Identity/IRolesApi";
+import { RolesApi } from "./Identity/RolesApi";
 
 
 export class BrandClient implements IAuthenticationApi {
@@ -76,6 +80,14 @@ export class BrandClient implements IAuthenticationApi {
 
   public getAuthorizedResourcesApi: (brandClientTokenInfo: BrandClientTokenInfo) => IAuthorizedResourcesApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
     return new AuthorizedResourcesApi(this.gatewayPath, brandClientTokenInfo);
+  };
+
+  public getUsersApi: (brandClientTokenInfo: BrandClientTokenInfo) => IUsersApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new UsersApi(this.gatewayPath, brandClientTokenInfo);
+  };
+
+  public getRolesApi: (brandClientTokenInfo: BrandClientTokenInfo) => IRolesApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new RolesApi(this.gatewayPath, brandClientTokenInfo);
   };
   
   // public getIdentityApi : () => IIdentityApi = () => {
