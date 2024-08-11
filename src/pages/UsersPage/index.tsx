@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, List, ListItem, ListItemText, ListItemIcon, IconButton, Typography, Box, Tooltip } from '@mui/material';
-import { isEqual, sortBy } from 'lodash';
 import PersonIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BuildIcon from '@mui/icons-material/Build';
@@ -14,10 +13,19 @@ import { UserModel } from './UserModel';
 import { User } from 'client/Identity/User';
 import { Role } from 'client/Identity/Role';
 
-const RoleIcon = styled('span')<{ active: boolean }>(({ theme, active }) => ({
+const RoleIcon = styled('span')<{ active: boolean; clickable?: boolean }>(({ theme, active, clickable }) => ({
   color: active ? theme.palette.primary.main : theme.palette.action.disabled,
   fontSize: '1.5rem',
   marginRight: theme.spacing(1),
+  cursor: clickable ? 'pointer' : 'default',
+}));
+
+const UserItem = styled(ListItem)<{ editing: boolean; grayedOut: boolean }>(({ theme, editing, grayedOut }) => ({
+  opacity: grayedOut ? 0.5 : 1,
+  pointerEvents: grayedOut ? 'none' : 'auto',
+  boxShadow: editing ? `0 0 10px 2px ${theme.palette.primary.main}` : 'none',
+  transition: 'opacity 0.3s, box-shadow 0.3s',
+  backgroundColor: editing ? theme.palette.action.hover : 'transparent',
 }));
 
 const UsersPage: React.FC = () => {
@@ -39,18 +47,11 @@ const UsersPage: React.FC = () => {
     return rolesApi;
   }, [client, brandClientTokenInfo]);
 
-  const [userBeingChanged, setUserBeingChanged] = useState<UserModel | undefined>(undefined);
   const [users, setUsers] = useState<UserModel[]>([]);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<{ [userId: string]: Role[] }>({});
 
   useEffect(() => {
-    // const mockUsers: User[] = [
-    //   { id: '1', name: 'Alice Johnson', roles: ['Spectator', 'Admin'] },
-    //   { id: '2', name: 'Bob Smith', roles: ['Maintainer'] },
-    //   { id: '3', name: 'Charlie Brown', roles: ['Performer', 'Spectator'] },
-    //   { id: '4', name: 'Diana Prince', roles: ['Admin', 'Performer', 'Maintainer'] },
-    //   { id: '5', name: 'Eve Black', roles: [] }, // No roles
-    // ];
-    
     const fetchUsersWithRoles = async () => {
       if(usersApi != null && rolesApi != null){
         const users: User[] = await usersApi.GetUsers();
@@ -64,31 +65,42 @@ const UsersPage: React.FC = () => {
           }
         }));
         setUsers(userModels);
+        setUserRoles(
+          userModels.reduce((acc, user) => {
+            acc[user.id] = user.roles;
+            return acc;
+          }, {} as { [userId: string]: Role[] })
+        );
       }
     }
 
     fetchUsersWithRoles();
-  }, []);
+  }, [usersApi, rolesApi]);
 
-  const handleChangeRoles = async (userId: string) => {
-    const theUser : UserModel | undefined = users.find(user => user.id == userId);
-    if(theUser == undefined){
-      return;
-    } 
-    if (userBeingChanged == undefined) {
-      setUserBeingChanged(theUser);
-    }
-    else {
-      if(!isEqual(userBeingChanged.roles, theUser!.roles))
-      {
-        const editedRoles = await rolesApi!.EditUserRoles(userId, userBeingChanged.roles);
-        theUser!.roles = editedRoles;
-        setUsers(prevUsers => [
-          ...prevUsers.filter(user => user.id != userId),
-          theUser
-        ]);
+  const handleChangeRoles = (userId: string) => {
+    setEditingUserId(userId);
+  };
+
+  const handleRoleToggle = (userId: string, role: Role) => {
+    setUserRoles((prevRoles) => {
+      const newRoles = [...(prevRoles[userId] || [])];
+      if (newRoles.includes(role)) {
+        // Remove role
+        return { ...prevRoles, [userId]: newRoles.filter(r => r !== role) };
+      } else {
+        // Add role
+        return { ...prevRoles, [userId]: [...newRoles, role] };
       }
-      setUserBeingChanged(undefined);
+    });
+  };
+
+  const handleSaveChanges = async (userId: string) => {
+    if (rolesApi && editingUserId) {
+      const newRoles = await rolesApi.EditUserRoles(userId, userRoles[userId]);
+      setEditingUserId(null);
+
+      // Optionally, refetch roles for verification
+      setUserRoles((prevRoles) => ({ ...prevRoles, [userId]: newRoles }));
     }
   };
 
@@ -99,26 +111,6 @@ const UsersPage: React.FC = () => {
     { role: 'Administrator', icon: <AdminPanelSettingsIcon /> },
   ];
 
-  function handleRoleToggle(role: Role): void {
-    setUserBeingChanged(prevUser => {
-      if (prevUser?.roles.includes(role)) {
-        return {
-          ...prevUser,
-          roles: prevUser.roles.filter(r => r != role)
-        }
-      } else {
-        const newRoles : Role[] | undefined = prevUser?.roles;
-        if(newRoles != undefined){ 
-          newRoles.push(role);
-        }
-        return {
-          ...prevUser,
-          roles: newRoles
-        }
-      }
-    });
-  }
-
   return (
     <div>
       <Typography variant="h4" gutterBottom>
@@ -126,7 +118,11 @@ const UsersPage: React.FC = () => {
       </Typography>
       <List>
         {users.map((user) => (
-          <ListItem key={user.id}>
+          <UserItem
+            key={user.id}
+            editing={editingUserId === user.id}
+            grayedOut={editingUserId !== null && editingUserId !== user.id}
+          >
             <ListItemIcon>
               <PersonIcon />
             </ListItemIcon>
@@ -134,21 +130,28 @@ const UsersPage: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               {roles.map(({ role, icon }) => (
                 <Tooltip key={role} title={role}>
-                  <RoleIcon active={user.roles.includes(role)}
-                   clickable={userBeingChanged?.id === user.id}
-                   onClick={() => userBeingChanged?.id === user.id && handleRoleToggle(role)}
+                  <RoleIcon
+                    active={userRoles[user.id]?.includes(role)}
+                    clickable={editingUserId === user.id}
+                    onClick={() => editingUserId === user.id && handleRoleToggle(user.id, role)}
                   >
                     {icon}
                   </RoleIcon>
                 </Tooltip>
               ))}
             </Box>
-            <IconButton onClick={() => handleChangeRoles(user.id)}>
-              <Button variant="outlined" color="primary">
-                Change Roles
+            {editingUserId === user.id ? (
+              <Button variant="contained" color="primary" onClick={() => handleSaveChanges(user.id)}>
+                Save Changes
               </Button>
-            </IconButton>
-          </ListItem>
+            ) : (
+              <IconButton onClick={() => handleChangeRoles(user.id)}>
+                <Button variant="outlined" color="primary">
+                  Change Roles
+                </Button>
+              </IconButton>
+            )}
+          </UserItem>
         ))}
       </List>
     </div>
