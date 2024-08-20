@@ -1,8 +1,8 @@
 import axios, { AxiosInstance } from "axios";
 import { IDevicesApi } from "./IDevicesApi";
 import { Device } from "./Device";
-import { DeviceConnectionInformation } from "./DeviceConnectionInformation";
 import { BrandClientTokenInfo } from "client/BrandClientConnectionInfo";
+import { DeviceOption } from "./DeviceOption";
 
 export class DevicesApi implements IDevicesApi {
     devicesAxiosClient: AxiosInstance;
@@ -26,14 +26,14 @@ export class DevicesApi implements IDevicesApi {
         var response = await this.devicesAxiosClient.get(`/${deviceId}`);
         return response.data;
     };
-    
-    GetDeviceConnectionInformations: (deviceId: string) => Promise<DeviceConnectionInformation[]> = async (deviceId: string) => {
-        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/connection');
-        return response.data;
-    };
 
     GetPmtModuleIdentification: (deviceId: string, cardIdentity: number, cardNumber: number) => Promise<string> = async (deviceId: string, cardIdentity: number, cardNumber: number) => {
         var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/pmt/idn');
         return response.data;
     };
+
+    GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]> = async (deviceId: string) => {
+        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/options');
+        return response.data;
+    }
 }

@@ -1,9 +1,9 @@
 import { Device } from "./Device";
-import { DeviceConnectionInformation } from "./DeviceConnectionInformation";
+import { DeviceOption } from "./DeviceOption";
 
 export interface IDevicesApi {
     GetDevices : () => Promise<Device[]>;
     GetDevice : (deviceId: string) => Promise<Device>;
-    GetDeviceConnectionInformations: (deviceId: string) => Promise<DeviceConnectionInformation[]>;
+    GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]>;
     GetPmtModuleIdentification: (deviceId: string, cardIdentity: number, cardNumber: number) => Promise<string>;
 }

@@ -1,22 +1,29 @@
-import { BrandClientContextProvider, useBrandClientContext } from 'components/Providers/BrandClientContext'
-import AdminPanel from 'pages/AdminPanel'
-import SignInPage from 'pages/SignInPage'
-import { useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { useBrandClientContext } from 'components/Providers/BrandClientContext';
+import AdminPanel from 'pages/AdminPanel';
+import DeviceConfiguration from 'pages/DeviceConfigurationPage';
+import LoadingScreen from 'pages/LoadingPage';
+import SignInPage from 'pages/SignInPage';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 function App() {
-  const { client, brandClientTokenInfo } = useBrandClientContext();
+  const { client, brandClientTokenInfo, loading } = useBrandClientContext();
+
+  const isAuthenticated = client.IsClientAuthenticated(brandClientTokenInfo);
+
+  if (loading) {
+    return <LoadingScreen />; // Or a loading spinner
+  }
 
   return (
     <div>
-        <Routes>
-          <Route path="/signin" element={!client.IsClientAuthenticated(brandClientTokenInfo) ? <SignInPage/> : <Navigate to="/home"/>}/>
-          <Route path="/" element={<Navigate to="/signin"/>}/>
-          <Route path="/home" element={client.IsClientAuthenticated(brandClientTokenInfo) ? <AdminPanel/> : <Navigate to="/signin"/>}/>
-          {/* <Route path="/*" element={<AdminPanel/>}/> */}
-        </Routes>
+      <Routes>
+        <Route path="/signin" element={!isAuthenticated ? <SignInPage /> : <Navigate to="/home" />} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/signin"} />} />
+        <Route path="/home" element={isAuthenticated ? <AdminPanel /> : <Navigate to="/signin" />} />
+        <Route path="/device-configuration/:deviceId" element={isAuthenticated ? <DeviceConfiguration /> : <Navigate to="/signin" />} />
+      </Routes>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, List, ListItem, ListItemText, ListItemIcon, IconButton, Typography, Box, Tooltip } from '@mui/material';
+import { Button, List, ListItemText, ListItemIcon, IconButton, Typography, Box, Tooltip, ListItem } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BuildIcon from '@mui/icons-material/Build';
@@ -12,6 +12,7 @@ import { IRolesApi } from 'client/Identity/IRolesApi';
 import { UserModel } from './UserModel';
 import { User } from 'client/Identity/User';
 import { Role } from 'client/Identity/Role';
+import { useTransition, animated } from '@react-spring/web';
 
 const RoleIcon = styled('span')<{ active: boolean; clickable?: boolean }>(({ theme, active, clickable }) => ({
   color: active ? theme.palette.primary.main : theme.palette.action.disabled,
@@ -20,12 +21,15 @@ const RoleIcon = styled('span')<{ active: boolean; clickable?: boolean }>(({ the
   cursor: clickable ? 'pointer' : 'default',
 }));
 
-const UserItem = styled(ListItem)<{ editing: boolean; grayedOut: boolean }>(({ theme, editing, grayedOut }) => ({
-  opacity: grayedOut ? 0.5 : 1,
-  pointerEvents: grayedOut ? 'none' : 'auto',
-  boxShadow: editing ? `0 0 10px 2px ${theme.palette.primary.main}` : 'none',
-  transition: 'opacity 0.3s, box-shadow 0.3s',
-  backgroundColor: editing ? theme.palette.action.hover : 'transparent',
+const ListItemStyled = styled(ListItem)<{ isEditing: boolean }>(({ theme, isEditing }) => ({
+  transition: 'box-shadow 0.3s',
+  boxShadow: isEditing ? `0 0 10px ${theme.palette.primary.main}` : 'none',
+  opacity: 1, // Ensure items are fully opaque by default
+  '&:hover': {
+    boxShadow: isEditing ? `0 0 10px ${theme.palette.primary.main}` : 'none',
+  },
+  display: 'flex', // Ensure flex layout
+  alignItems: 'center', // Center items vertically
 }));
 
 const UsersPage: React.FC = () => {
@@ -77,6 +81,13 @@ const UsersPage: React.FC = () => {
     fetchUsersWithRoles();
   }, [usersApi, rolesApi]);
 
+  const transitions = useTransition(users, {
+    from: { opacity: 0, transform: 'translateY(20px)' },
+    enter: { opacity: 1, transform: 'translateY(0px)' },
+    leave: { opacity: 0, transform: 'translateY(20px)' },
+    keys: users.map((user) => user.id),
+  });
+
   const handleChangeRoles = (userId: string) => {
     setEditingUserId(userId);
   };
@@ -117,41 +128,39 @@ const UsersPage: React.FC = () => {
         Users
       </Typography>
       <List>
-        {users.map((user) => (
-          <UserItem
-            key={user.id}
-            editing={editingUserId === user.id}
-            grayedOut={editingUserId !== null && editingUserId !== user.id}
-          >
-            <ListItemIcon>
-              <PersonIcon />
-            </ListItemIcon>
-            <ListItemText primary={user.userName} />
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {roles.map(({ role, icon }) => (
-                <Tooltip key={role} title={role}>
-                  <RoleIcon
-                    active={userRoles[user.id]?.includes(role)}
-                    clickable={editingUserId === user.id}
-                    onClick={() => editingUserId === user.id && handleRoleToggle(user.id, role)}
-                  >
-                    {icon}
-                  </RoleIcon>
-                </Tooltip>
-              ))}
-            </Box>
-            {editingUserId === user.id ? (
-              <Button variant="contained" color="primary" onClick={() => handleSaveChanges(user.id)}>
-                Save Changes
-              </Button>
-            ) : (
+        {transitions((style, user) => (
+          <animated.div style={style}>
+            <ListItemStyled isEditing={editingUserId === user.id}>
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary={user.userName} sx={{ flex: '1 1 auto' }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, flex: '1 1 auto' }}>
+                {roles.map(({ role, icon }) => (
+                  <Tooltip key={role} title={role}>
+                    <RoleIcon
+                      active={userRoles[user.id]?.includes(role)}
+                      clickable={editingUserId === user.id}
+                      onClick={() => editingUserId === user.id && handleRoleToggle(user.id, role)}
+                    >
+                      {icon}
+                    </RoleIcon>
+                  </Tooltip>
+                ))}
+              </Box>
               <IconButton onClick={() => handleChangeRoles(user.id)}>
-                <Button variant="outlined" color="primary">
-                  Change Roles
-                </Button>
+                {editingUserId === user.id ? (
+                  <Button variant="contained" color="primary" onClick={() => handleSaveChanges(user.id)}>
+                    Save Changes
+                  </Button>
+                ) : (
+                  <Button variant="outlined" color="primary">
+                    Change Roles
+                  </Button>
+                )}
               </IconButton>
-            )}
-          </UserItem>
+            </ListItemStyled>
+          </animated.div>
         ))}
       </List>
     </div>

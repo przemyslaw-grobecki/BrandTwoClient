@@ -5,6 +5,8 @@ import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { Device } from 'client/Devices/Device';
 import { IAuthorizedResourcesApi } from 'client/AuthorizedResources/IAuthorizedResourcesApi';
+import { useTrail, animated } from '@react-spring/web';
+import { deviceTypeToString } from 'client/Devices/DeviceTypeToString';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
   transition: 'transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s',
@@ -48,7 +50,6 @@ const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, 
   width: maxWidth,
 }));
 
-
 const DevicesPage: React.FC = () => {
   const theme = useTheme();
   const { client, brandClientTokenInfo } = useBrandClientContext();
@@ -78,8 +79,8 @@ const DevicesPage: React.FC = () => {
   // Hardcoded device
   const hardcodedDevice: Device = {
     deviceId: 'Brand Acquisition',
-    occupiedComPort: 'COM7',
-    connectionType: 'Ethernet',
+    occupiedComPort: '',
+    type: 7,
   };
 
   useEffect(() => {
@@ -130,10 +131,10 @@ const DevicesPage: React.FC = () => {
   const handleConfigureDevice = () => {
     if (selectedDevices.size === 1) {
       const deviceId = Array.from(selectedDevices)[0];
-      alert(`Configuring device: ${deviceId}`);
-      // Add configuration logic here
+      window.open(`/device-configuration/${deviceId}`, '_blank');
     }
   };
+  
 
   const handleCreateExperiment = () => {
     if (selectedDevices.size > 0) {
@@ -142,59 +143,68 @@ const DevicesPage: React.FC = () => {
     }
   };
 
+  // Animation for devices
+  const trail = useTrail(devices.length, {
+    from: { opacity: 0, transform: 'scale(0.9)' },
+    to: { opacity: 1, transform: 'scale(1)' },
+    config: { tension: 200, friction: 20 },
+  });
+
   return (
     <div>
       <Typography variant="h4" gutterBottom>
         Devices
       </Typography>
       <Grid container spacing={3}>
-        {devices.map((device, index) => (
-          <Grid item xs={12} sm={6} md={4} key={device.deviceId}>
-            <ButtonBase onClick={() => handleCardClick(device.deviceId)} sx={{ width: '100%' }}>
-              <Tooltip
-                title="Access denied"
-                open={accessDenied === device.deviceId}
-                placement="top"
-                arrow
-              >
-                <Box
-                  ref={(el) => (cardRefs.current[index] = el!)}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100%',
-                  }}
+        {trail.map((animation, index) => (
+          <Grid item xs={12} sm={6} md={4} key={devices[index].deviceId}>
+            <animated.div style={{ ...animation, padding: theme.spacing(1) }}>
+              <ButtonBase onClick={() => handleCardClick(devices[index].deviceId)} sx={{ width: '100%' }}>
+                <Tooltip
+                  title="Access denied"
+                  open={accessDenied === devices[index].deviceId}
+                  placement="top"
+                  arrow
                 >
-                  <GlowCard
-                    selected={selectedDevices.has(device.deviceId)}
-                    theme={theme}
-                    special={device.deviceId === 'Brand Acquisition'} // Apply special styling to hardcoded device
-                    maxHeight={maxHeight ?? 'auto'}
-                    maxWidth={maxWidth ?? 'auto'}
-                    error={accessDenied === device.deviceId} // Apply error styling if access is denied
+                  <Box
+                    ref={(el) => (cardRefs.current[index] = el!)}
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      height: '100%',
+                    }}
                   >
-                    <CardMedia
-                      component="img"
-                      alt="Device Image"
-                      height="140"
-                      image={`https://picsum.photos/seed/${device.deviceId}/400/600`} // Random image
-                    />
-                    <CardContent>
-                      <Typography variant="h6" component="div">
-                        {device.deviceId}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Occupied Com Port: {device.occupiedComPort}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Connection Type: {device.connectionType}
-                      </Typography>
-                    </CardContent>
-                  </GlowCard>
-                </Box>
-              </Tooltip>
-            </ButtonBase>
+                    <GlowCard
+                      selected={selectedDevices.has(devices[index].deviceId)}
+                      theme={theme}
+                      special={devices[index].deviceId === 'Brand Acquisition'} // Apply special styling to hardcoded device
+                      maxHeight={maxHeight ?? 'auto'}
+                      maxWidth={maxWidth ?? 'auto'}
+                      error={accessDenied === devices[index].deviceId} // Apply error styling if access is denied
+                    >
+                      <CardMedia
+                        component="img"
+                        alt="Device Image"
+                        height="140"
+                        image={`https://picsum.photos/seed/${devices[index].deviceId}/400/600`} // Random image
+                      />
+                      <CardContent>
+                        <Typography variant="h6" component="div">
+                          {devices[index].deviceId}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Occupied Com Port: {devices[index].occupiedComPort}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Device Type: {deviceTypeToString(devices[index].type)}
+                        </Typography>
+                      </CardContent>
+                    </GlowCard>
+                  </Box>
+                </Tooltip>
+              </ButtonBase>
+            </animated.div>
           </Grid>
         ))}
       </Grid>
