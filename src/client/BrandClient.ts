@@ -10,6 +10,8 @@ import { IUsersApi } from "./Identity/IUsersApi";
 import { UsersApi } from "./Identity/UsersApi";
 import { IRolesApi } from "./Identity/IRolesApi";
 import { RolesApi } from "./Identity/RolesApi";
+import { ExperimentsApi } from "./Experiments/ExperimentsApi";
+import { IExperimentsApi } from "./Experiments/IExperimentsApi";
 
 
 export class BrandClient implements IAuthenticationApi {
@@ -89,7 +91,10 @@ export class BrandClient implements IAuthenticationApi {
   public getRolesApi: (brandClientTokenInfo: BrandClientTokenInfo) => IRolesApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
     return new RolesApi(this.gatewayPath, brandClientTokenInfo);
   };
-  
+
+  public getExperimentsApi: (brandClientTokenInfo: BrandClientTokenInfo) => IExperimentsApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new ExperimentsApi(this.gatewayPath, brandClientTokenInfo);
+  };
   // public getIdentityApi : () => IIdentityApi = () => {
   //     return new IdentityApi(this.gatewayPath);
   // }

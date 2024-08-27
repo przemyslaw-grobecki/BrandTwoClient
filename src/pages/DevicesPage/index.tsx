@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip } from '@mui/material';
+import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
 import { Settings as SettingsIcon, Science as ScienceIcon } from '@mui/icons-material';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
@@ -7,6 +7,7 @@ import { Device } from 'client/Devices/Device';
 import { IAuthorizedResourcesApi } from 'client/AuthorizedResources/IAuthorizedResourcesApi';
 import { useTrail, animated } from '@react-spring/web';
 import { deviceTypeToString } from 'client/Devices/DeviceTypeToString';
+import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
   transition: 'transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s',
@@ -69,11 +70,21 @@ const DevicesPage: React.FC = () => {
     return authorizedResourcesApi;
   }, [client, brandClientTokenInfo]);
 
+  const experimentsApi: IExperimentsApi | undefined = useMemo(() => {
+    let experimentsApi: IExperimentsApi | undefined;
+    if (brandClientTokenInfo != null) {
+      experimentsApi = client.getExperimentsApi(brandClientTokenInfo);
+    }
+    return experimentsApi;
+  }, [client, brandClientTokenInfo]);
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   const [maxWidth, setMaxWidth] = useState<number | null>(null);
   const [accessDenied, setAccessDenied] = useState<string | null>(null); // Track access denied card
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [storeData, setStoreData] = useState(false);
   const cardRefs = useRef<HTMLDivElement[]>([]);
 
   // Hardcoded device
@@ -103,8 +114,8 @@ const DevicesPage: React.FC = () => {
   }, [devices]);
 
   const isUserAuthorizedToResource = async (resourceId: string): Promise<boolean> => {
-    if(authorizedResourcesApi != null){
-      var response = await authorizedResourcesApi.HasAccess(resourceId);
+    if (authorizedResourcesApi != null) {
+      const response = await authorizedResourcesApi.HasAccess(resourceId);
       return response.isAuthorized;
     }
     return false;
@@ -134,12 +145,24 @@ const DevicesPage: React.FC = () => {
       window.open(`/device-configuration/${deviceId}`, '_blank');
     }
   };
-  
 
   const handleCreateExperiment = () => {
     if (selectedDevices.size > 0) {
+      setIsDialogOpen(true); // Open the dialog when the user clicks the "Create Experiment" button
+    }
+  };
+
+  const handleDialogClose = async (confirmed: boolean) => {
+    setIsDialogOpen(false); // Close the dialog
+
+    if (confirmed && experimentsApi != null) {
       alert('Creating an experiment with selected devices');
-      // Add experiment creation logic here
+
+      // Call the API to create the experiment
+      await experimentsApi.CreateExperiment(
+        Array.from(selectedDevices),
+        storeData ? 'storage' : 'freefall',
+      );
     }
   };
 
@@ -232,6 +255,41 @@ const DevicesPage: React.FC = () => {
           </Fab>
         </Zoom>
       </Box>
+
+      {/* Experiment Creation Dialog */}
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => handleDialogClose(false)}
+      >
+        <DialogTitle>Confirm Experiment Creation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Do you want to store the data from the selected devices during the experiment?
+          </DialogContentText>
+          <Button
+            variant={storeData ? "contained" : "outlined"}
+            onClick={() => setStoreData(true)}
+            sx={{ mt: 2, mr: 2 }}
+          >
+            Store Data
+          </Button>
+          <Button
+            variant={!storeData ? "contained" : "outlined"}
+            onClick={() => setStoreData(false)}
+            sx={{ mt: 2 }}
+          >
+            Do Not Store Data
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleDialogClose(false)} color="secondary">
+            Cancel
+          </Button>
+          <Button onClick={() => handleDialogClose(true)} color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
