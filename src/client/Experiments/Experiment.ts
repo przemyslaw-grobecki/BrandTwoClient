@@ -1,9 +1,9 @@
 export type Experiment = {
-    Id: string,
-    DeviceIds: string[],
-    AcquisitionMode: string,
-    CreatedAt: Date,
-    StartedAt: Date | undefined,
-    EndedAt: Date | undefined,
-    ArchivedAt: Date | undefined
+    id: string,
+    deviceIds: string[],
+    acquisitionMode: string,
+    createdAt: Date,
+    startedAt: Date | undefined,
+    endedAt: Date | undefined,
+    archivedAt: Date | undefined
 };

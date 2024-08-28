@@ -14,6 +14,16 @@ export class ExperimentsApi implements IExperimentsApi {
             }
         });
     }
+
+    GetRelevantExperiments: () => Promise<Experiment[]> = async () => {
+        const response = await this.experimentsAxiosClient.get('');
+        return response.data;
+    };
+    
+    GetArchivedExperiments: () => Promise<Experiment[]> = async () => {
+        const response = await this.experimentsAxiosClient.get('/archived');
+        return response.data;
+    };
     
     CreateExperiment: (deviceIds: string[], acquisitionMode: string | undefined) => Promise<Experiment> = async (deviceIds: string[], acquisitionMode: string | undefined) => {
         const response = await this.experimentsAxiosClient.post('', {
