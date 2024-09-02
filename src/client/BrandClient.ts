@@ -12,6 +12,8 @@ import { IRolesApi } from "./Identity/IRolesApi";
 import { RolesApi } from "./Identity/RolesApi";
 import { ExperimentsApi } from "./Experiments/ExperimentsApi";
 import { IExperimentsApi } from "./Experiments/IExperimentsApi";
+import { IAcquisitonApi } from "./Acquisition/IAcquisitionApi";
+import { AcquisitionApi } from "./Acquisition/AcquisitionApi";
 
 
 export class BrandClient implements IAuthenticationApi {
@@ -95,7 +97,8 @@ export class BrandClient implements IAuthenticationApi {
   public getExperimentsApi: (brandClientTokenInfo: BrandClientTokenInfo) => IExperimentsApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
     return new ExperimentsApi(this.gatewayPath, brandClientTokenInfo);
   };
-  // public getIdentityApi : () => IIdentityApi = () => {
-  //     return new IdentityApi(this.gatewayPath);
-  // }
+
+  public getAcquisitionApi: (brandClientTokenInfo: BrandClientTokenInfo) => IAcquisitonApi = (brandClientTokenInfo: BrandClientTokenInfo) => {
+    return new AcquisitionApi(this.gatewayPath, brandClientTokenInfo);
+  };
 }

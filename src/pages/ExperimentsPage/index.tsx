@@ -5,6 +5,7 @@ import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
 import { Experiment } from 'client/Experiments/Experiment';
 import { useTrail, animated } from '@react-spring/web';
+import { useNavigate } from 'react-router-dom';
 import StatusIndicator from 'components/StatusIndicatorComponent';  // Import the StatusIndicator component
 
 const GlowCard = styled(Card)(({ theme, selected }: { theme: any; selected: boolean }) => ({
@@ -97,6 +98,7 @@ const ExperimentsPage: React.FC = () => {
   const handleLiveView = () => {
     if (selectedExperiment) {
       alert(`Viewing live data for experiment: ${selectedExperiment}`);
+      window.open(`/experiment/${selectedExperiment}/charts`, '_blank');
       // Add logic for live view
     }
   };
@@ -110,11 +112,9 @@ const ExperimentsPage: React.FC = () => {
 
   const handleViewCharts = () => {
     if (selectedExperiment) {
-      alert(`Viewing charts for experiment: ${selectedExperiment}`);
-      // Add logic to view charts
     }
   };
-
+  
   const handleDeleteExperiment = () => {
     if (selectedExperiment) {
       alert(`Deleting experiment: ${selectedExperiment}`);

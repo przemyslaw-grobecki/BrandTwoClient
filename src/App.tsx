@@ -1,9 +1,12 @@
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import AdminPanel from 'pages/AdminPanel';
 import DeviceConfiguration from 'pages/DeviceConfigurationPage';
+import AcquisitionConfigurationPage from 'pages/AcquisitionConfigurationPage';
+import RealTimeChartPage from 'pages/ChartPage';
+
 import LoadingScreen from 'pages/LoadingPage';
 import SignInPage from 'pages/SignInPage';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 
 function App() {
   const { client, brandClientTokenInfo, loading } = useBrandClientContext();
@@ -21,9 +24,16 @@ function App() {
         <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/signin"} />} />
         <Route path="/home" element={isAuthenticated ? <AdminPanel /> : <Navigate to="/signin" />} />
         <Route path="/device-configuration/:deviceId" element={isAuthenticated ? <DeviceConfiguration /> : <Navigate to="/signin" />} />
+        <Route path="/acquisition-configuration/:deviceId"  element={isAuthenticated ? <AcquisitionConfigurationPage /> : <Navigate to="/signin" />} />
+        <Route path="/experiment/:experimentId/charts" element={isAuthenticated ? <RealTimeChartPageWrapper/> : <Navigate to= "/signin" />} />
       </Routes>
     </div>
   );
 }
+
+const RealTimeChartPageWrapper: React.FC = () => {
+  const { experimentId } = useParams<{ experimentId: string }>();
+  return <RealTimeChartPage experimentId={experimentId!} />;
+};
 
 export default App;

@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, List, ListItemText, ListItemIcon, IconButton, Typography, Box, Tooltip, ListItem } from '@mui/material';
+import {
+  Button,
+  List,
+  ListItemText,
+  ListItemIcon,
+  IconButton,
+  Typography,
+  Box,
+  Tooltip,
+  ListItem,
+  Checkbox,
+} from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import BuildIcon from '@mui/icons-material/Build';
@@ -12,7 +23,10 @@ import { IRolesApi } from 'client/Identity/IRolesApi';
 import { UserModel } from './UserModel';
 import { User } from 'client/Identity/User';
 import { Role } from 'client/Identity/Role';
+import { IAuthorizedResourcesApi } from 'client/AuthorizedResources/IAuthorizedResourcesApi'; // Assume you have a Resources API
 import { useTransition, animated } from '@react-spring/web';
+import { IDevicesApi } from 'client/Devices/IDevicesApi';
+import { Device } from 'client/Devices/Device';
 
 const RoleIcon = styled('span')<{ active: boolean; clickable?: boolean }>(({ theme, active, clickable }) => ({
   color: active ? theme.palette.primary.main : theme.palette.action.disabled,
@@ -24,62 +38,86 @@ const RoleIcon = styled('span')<{ active: boolean; clickable?: boolean }>(({ the
 const ListItemStyled = styled(ListItem)<{ isEditing: boolean }>(({ theme, isEditing }) => ({
   transition: 'box-shadow 0.3s',
   boxShadow: isEditing ? `0 0 10px ${theme.palette.primary.main}` : 'none',
-  opacity: 1, // Ensure items are fully opaque by default
+  opacity: 1,
   '&:hover': {
     boxShadow: isEditing ? `0 0 10px ${theme.palette.primary.main}` : 'none',
   },
-  display: 'flex', // Ensure flex layout
-  alignItems: 'center', // Center items vertically
+  display: 'flex',
+  alignItems: 'center',
 }));
 
 const UsersPage: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
-  
+
   const usersApi: IUsersApi | undefined = useMemo(() => {
-    let usersApi: IUsersApi | undefined;
     if (brandClientTokenInfo != null) {
-      usersApi = client.getUsersApi(brandClientTokenInfo);
+      return client.getUsersApi(brandClientTokenInfo);
     }
-    return usersApi;
   }, [client, brandClientTokenInfo]);
 
   const rolesApi: IRolesApi | undefined = useMemo(() => {
-    let rolesApi: IRolesApi | undefined;
     if (brandClientTokenInfo != null) {
-      rolesApi = client.getRolesApi(brandClientTokenInfo);
+      return client.getRolesApi(brandClientTokenInfo);
     }
-    return rolesApi;
+  }, [client, brandClientTokenInfo]);
+
+  const resourcesApi: IAuthorizedResourcesApi | undefined = useMemo(() => {
+    if (brandClientTokenInfo != null) {
+      return client.getAuthorizedResourcesApi(brandClientTokenInfo);
+    }
+  }, [client, brandClientTokenInfo]);
+
+  const devicesApi: IDevicesApi | undefined = useMemo(() => {
+    if (brandClientTokenInfo != null) {
+      return client.getDevicesApi(brandClientTokenInfo);
+    }
   }, [client, brandClientTokenInfo]);
 
   const [users, setUsers] = useState<UserModel[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]); // Store all devices here
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [userRoles, setUserRoles] = useState<{ [userId: string]: Role[] }>({});
+  const [userResources, setUserResources] = useState<{ [userId: string]: string[] }>({});
+  const [isEditingResources, setIsEditingResources] = useState<boolean>(false);
 
   useEffect(() => {
-    const fetchUsersWithRoles = async () => {
-      if(usersApi != null && rolesApi != null){
+    const fetchData = async () => {
+      if (usersApi && rolesApi && resourcesApi && devicesApi) {
         const users: User[] = await usersApi.GetUsers();
-        const userModels: UserModel[] = await Promise.all<UserModel>(users.map(async user => {
-          const roles: Role[] = await rolesApi.GetUserRoles(user.id);
-          return {
-            id: user.id,
-            userName: user.userName,
-            email: user.email,
-            roles: roles
-          }
-        }));
+        const devices: Device[] = await devicesApi.GetDevices(); // Fetch all devices once
+        const userModels: UserModel[] = await Promise.all<UserModel>(
+          users.map(async (user) => {
+            const roles: Role[] = await rolesApi.GetUserRoles(user.id);
+            const authorizedResourcesIds: string[] = await resourcesApi.GetAuthorizedResourcesForUser(user.id);
+            return {
+              id: user.id,
+              userName: user.userName,
+              email: user.email,
+              roles: roles,
+              authorizedResourcesIds: authorizedResourcesIds,
+            };
+          })
+        );
+
         setUsers(userModels);
+        setDevices(devices); // Set the available devices
         setUserRoles(
           userModels.reduce((acc, user) => {
             acc[user.id] = user.roles;
             return acc;
           }, {} as { [userId: string]: Role[] })
         );
+        setUserResources(
+          userModels.reduce((acc, user) => {
+            acc[user.id] = user.authorizedResourcesIds;
+            return acc;
+          }, {} as { [userId: string]: string[] })
+        );
       }
-    }
+    };
 
-    fetchUsersWithRoles();
-  }, [usersApi, rolesApi]);
+    fetchData();
+  }, [usersApi, rolesApi, resourcesApi, devicesApi]);
 
   const transitions = useTransition(users, {
     from: { opacity: 0, transform: 'translateY(20px)' },
@@ -90,32 +128,50 @@ const UsersPage: React.FC = () => {
 
   const handleChangeRoles = (userId: string) => {
     setEditingUserId(userId);
+    setIsEditingResources(false); // Ensure not editing resources at the same time
+  };
+
+  const handleChangeResources = (userId: string) => {
+    setEditingUserId(userId);
+    setIsEditingResources(true); // Toggle to editing resources
   };
 
   const handleRoleToggle = (userId: string, role: Role) => {
     setUserRoles((prevRoles) => {
       const newRoles = [...(prevRoles[userId] || [])];
       if (newRoles.includes(role)) {
-        // Remove role
-        return { ...prevRoles, [userId]: newRoles.filter(r => r !== role) };
+        return { ...prevRoles, [userId]: newRoles.filter((r) => r !== role) };
       } else {
-        // Add role
         return { ...prevRoles, [userId]: [...newRoles, role] };
       }
     });
   };
 
+  const handleResourceToggle = (userId: string, resource: string) => {
+    setUserResources((prevResources) => {
+      const newResources = [...(prevResources[userId] || [])];
+      if (newResources.includes(resource)) {
+        return { ...prevResources, [userId]: newResources.filter((r) => r !== resource) };
+      } else {
+        return { ...prevResources, [userId]: [...newResources, resource] };
+      }
+    });
+  };
+
   const handleSaveChanges = async (userId: string) => {
-    if (rolesApi && editingUserId) {
+    if (rolesApi && editingUserId && !isEditingResources) {
       const newRoles = await rolesApi.EditUserRoles(userId, userRoles[userId]);
       setEditingUserId(null);
-
-      // Optionally, refetch roles for verification
       setUserRoles((prevRoles) => ({ ...prevRoles, [userId]: newRoles }));
+    }
+    if (resourcesApi && editingUserId && isEditingResources) {
+      const newResources = await resourcesApi.SetAuthorizedResourcesForUser(userId, userResources[userId]);
+      setEditingUserId(null);
+      setUserResources((prevResources) => ({ ...prevResources, [userId]: newResources }));
     }
   };
 
-  const roles: { role: Role, icon: any }[] = [
+  const roles: { role: Role; icon: any }[] = [
     { role: 'Spectator', icon: <VisibilityIcon /> },
     { role: 'Maintainer', icon: <BuildIcon /> },
     { role: 'Performer', icon: <PlayCircleFilledIcon /> },
@@ -140,26 +196,51 @@ const UsersPage: React.FC = () => {
                   <Tooltip key={role} title={role}>
                     <RoleIcon
                       active={userRoles[user.id]?.includes(role)}
-                      clickable={editingUserId === user.id}
-                      onClick={() => editingUserId === user.id && handleRoleToggle(user.id, role)}
+                      clickable={editingUserId === user.id && !isEditingResources}
+                      onClick={() => editingUserId === user.id && !isEditingResources && handleRoleToggle(user.id, role)}
                     >
                       {icon}
                     </RoleIcon>
                   </Tooltip>
                 ))}
               </Box>
-              <IconButton onClick={() => handleChangeRoles(user.id)}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
                 {editingUserId === user.id ? (
                   <Button variant="contained" color="primary" onClick={() => handleSaveChanges(user.id)}>
                     Save Changes
                   </Button>
                 ) : (
-                  <Button variant="outlined" color="primary">
-                    Change Roles
-                  </Button>
+                  <>
+                    <IconButton onClick={() => handleChangeRoles(user.id)}>
+                      <Button variant="outlined" color="primary">
+                        Change Roles
+                      </Button>
+                    </IconButton>
+                    <IconButton onClick={() => handleChangeResources(user.id)}>
+                      <Button variant="outlined" color="primary">
+                        Change Resource Permissions
+                      </Button>
+                    </IconButton>
+                  </>
                 )}
-              </IconButton>
+              </Box>
             </ListItemStyled>
+            {editingUserId === user.id && isEditingResources && (
+              <Box sx={{ pl: 4, pr: 4, pt: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Edit Resource Permissions
+                </Typography>
+                {devices.map((device) => (
+                  <Box key={device.deviceId} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Checkbox
+                      checked={userResources[user.id]?.includes(device.deviceId)}
+                      onChange={() => handleResourceToggle(user.id, device.deviceId)}
+                    />
+                    <Typography>{device.occupiedComPort}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </animated.div>
         ))}
       </List>

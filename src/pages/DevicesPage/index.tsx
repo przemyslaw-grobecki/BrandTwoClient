@@ -142,7 +142,11 @@ const DevicesPage: React.FC = () => {
   const handleConfigureDevice = () => {
     if (selectedDevices.size === 1) {
       const deviceId = Array.from(selectedDevices)[0];
-      window.open(`/device-configuration/${deviceId}`, '_blank');
+      if (deviceId === 'Brand Acquisition') {
+        window.open(`/acquisition-configuration/${deviceId}`, '_blank');
+      } else {
+        window.open(`/device-configuration/${deviceId}`, '_blank');
+      }
     }
   };
 

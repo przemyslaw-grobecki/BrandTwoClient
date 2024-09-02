@@ -5,4 +5,5 @@ export type UserModel = {
     userName: string;
     email: string;
     roles: Role[];
+    authorizedResourcesIds: string[]
 }
