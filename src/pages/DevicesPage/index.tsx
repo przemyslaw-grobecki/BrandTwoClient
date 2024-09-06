@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, TextField, MenuItem } from '@mui/material';
-import { Settings as SettingsIcon, Science as ScienceIcon } from '@mui/icons-material';
+import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, TextField, MenuItem, IconButton } from '@mui/material';
+import { Settings as SettingsIcon, Science as ScienceIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { Device } from 'client/Devices/Device';
@@ -9,6 +9,7 @@ import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
 import { IAcquisitonApi } from 'client/Acquisition/IAcquisitionApi';
 import { useTrail, animated } from '@react-spring/web';
 import { deviceTypeToString } from 'client/Devices/DeviceTypeToString';
+import { AcquisitionConfiguration } from 'client/Acquisition/AcquisitionConfiguration';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
   // same GlowCard styles
@@ -53,13 +54,14 @@ const DevicesPage: React.FC = () => {
     type: 7,
   };
 
+  const fetchDevices = async () => {
+    if (devicesApi != null) {
+      let devices = await devicesApi.GetDevices();
+      setDevices([hardcodedDevice, ...devices]);
+    }
+  };
+
   useEffect(() => {
-    const fetchDevices = async () => {
-      if (devicesApi != null) {
-        let devices = await devicesApi.GetDevices();
-        setDevices([hardcodedDevice, ...devices]);
-      }
-    };
     fetchDevices();
   }, [devicesApi]);
 
@@ -147,9 +149,16 @@ const DevicesPage: React.FC = () => {
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom>
-        Devices
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="h4" gutterBottom>
+          Devices
+        </Typography>
+        {/* Refresh button */}
+        <IconButton onClick={fetchDevices} color="primary">
+          <RefreshIcon />
+        </IconButton>
+      </Box>
+
       <Grid container spacing={3}>
         {trail.map((animation, index) => (
           <Grid item xs={12} sm={6} md={4} key={devices[index].deviceId}>
