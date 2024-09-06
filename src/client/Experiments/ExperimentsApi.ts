@@ -14,6 +14,10 @@ export class ExperimentsApi implements IExperimentsApi {
             }
         });
     }
+    DownloadExperimentData: (experimentId: string) => Promise<Blob> = async (experimentId: string) => {
+        const response = await this.experimentsAxiosClient.get(`${experimentId}/DownloadExperimentData`)
+        return response.data.blob();
+    };
 
     GetRelevantExperiments: () => Promise<Experiment[]> = async () => {
         const response = await this.experimentsAxiosClient.get('');
@@ -44,7 +48,7 @@ export class ExperimentsApi implements IExperimentsApi {
         return response.data;
     };
 
-    StartExperiment: (experimentId: string, duration: number | undefined) => Promise<void> = async (experimentId: string, duration: number | undefined) => {
+    StartExperiment: (experimentId: string, duration?: number | undefined) => Promise<void> = async (experimentId: string, duration?: number | undefined) => {
         await this.experimentsAxiosClient.post(experimentId + '/Start', {
             duration: duration
         });

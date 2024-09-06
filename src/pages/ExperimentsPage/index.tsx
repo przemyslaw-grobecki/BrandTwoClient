@@ -1,49 +1,71 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip } from '@mui/material';
-import { PlayArrow as StartIcon, Stop as StopIcon, Visibility as LiveViewIcon, BarChart as ChartsIcon, Download as DownloadIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { useBrandClientContext } from 'components/Providers/BrandClientContext';
-import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
-import { Experiment } from 'client/Experiments/Experiment';
-import { useTrail, animated } from '@react-spring/web';
-import { useNavigate } from 'react-router-dom';
-import StatusIndicator from 'components/StatusIndicatorComponent';  // Import the StatusIndicator component
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import {
+  ButtonBase,
+  Card,
+  CardContent,
+  CardMedia,
+  Grid,
+  styled,
+  Typography,
+  useTheme,
+  Box,
+  Fab,
+  Zoom,
+  Tooltip,
+} from "@mui/material";
+import {
+  PlayArrow as StartIcon,
+  Stop as StopIcon,
+  Visibility as LiveViewIcon,
+  BarChart as ChartsIcon,
+  Download as DownloadIcon,
+  Delete as DeleteIcon,
+} from "@mui/icons-material";
+import { useBrandClientContext } from "components/Providers/BrandClientContext";
+import { IExperimentsApi } from "client/Experiments/IExperimentsApi";
+import { Experiment } from "client/Experiments/Experiment";
+import { useTrail, animated } from "@react-spring/web";
+import { useNavigate } from "react-router-dom";
+import StatusIndicator from "components/StatusIndicatorComponent"; // Import the StatusIndicator component
+import { useAlert } from "components/Providers/AlertContext";
 
-const GlowCard = styled(Card)(({ theme, selected }: { theme: any; selected: boolean }) => ({
-  transition: 'transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s',
-  transform: selected ? 'scale(1.05)' : 'scale(1)',
-  boxShadow: selected
-    ? `0 0 30px ${theme.palette.primary.main}`
-    : 'none',
-  position: 'relative',
-  top: selected ? '-10px' : '0', // Move selected cards higher
-  zIndex: selected ? 2 : 1, // Ensure selected cards are on top
-  '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: `0 0 30px ${theme.palette.primary.main}`,
-    zIndex: 3, // Ensure hovered card is on top, but below selected cards
-  },
-  '&:active': {
-    transform: 'scale(1.05)',
-    boxShadow: `0 0 30px ${theme.palette.primary.main}`,
-  },
-}));
+const GlowCard = styled(Card)(
+  ({ theme, selected }: { theme: any; selected: boolean }) => ({
+    transition: "transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s",
+    transform: selected ? "scale(1.05)" : "scale(1)",
+    boxShadow: selected ? `0 0 30px ${theme.palette.primary.main}` : "none",
+    position: "relative",
+    top: selected ? "-10px" : "0", // Move selected cards higher
+    zIndex: selected ? 2 : 1, // Ensure selected cards are on top
+    "&:hover": {
+      transform: "scale(1.05)",
+      boxShadow: `0 0 30px ${theme.palette.primary.main}`,
+      zIndex: 3, // Ensure hovered card is on top, but below selected cards
+    },
+    "&:active": {
+      transform: "scale(1.05)",
+      boxShadow: `0 0 30px ${theme.palette.primary.main}`,
+    },
+  })
+);
 
 const getStatus = (experiment: Experiment) => {
   if (experiment.endedAt != null) {
-    return 'Ended';
+    return "Ended";
   }
   if (experiment.startedAt != null) {
-    return 'Started';
+    return "Started";
   }
   if (experiment.createdAt != null) {
-    return 'Created';
+    return "Created";
   }
-  return 'Unknown'; // Fallback status
+  return "Unknown"; // Fallback status
 };
 
 const ExperimentsPage: React.FC = () => {
   const theme = useTheme();
   const { client, brandClientTokenInfo } = useBrandClientContext();
+  const { showAlert } = useAlert();
   const experimentsApi: IExperimentsApi | undefined = useMemo(() => {
     let experimentsApi: IExperimentsApi | undefined;
     if (brandClientTokenInfo != null) {
@@ -53,7 +75,9 @@ const ExperimentsPage: React.FC = () => {
   }, [client, brandClientTokenInfo]);
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
+  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
+    null
+  );
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   const [maxWidth, setMaxWidth] = useState<number | null>(null);
   const cardRefs = useRef<HTMLDivElement[]>([]);
@@ -81,32 +105,71 @@ const ExperimentsPage: React.FC = () => {
     setSelectedExperiment(id);
   };
 
-  const handleStartExperiment = () => {
+  const handleStartExperiment = async () => {
     if (selectedExperiment) {
-      alert(`Starting experiment: ${selectedExperiment}`);
+      // alert(`Starting experiment: ${selectedExperiment}`);
       // Add logic to start the experiment
+      if (experimentsApi != null) {
+        try {
+          await experimentsApi.StartExperiment(selectedExperiment);
+          showAlert('Experiment started', 'info');
+        } catch (error) {
+          showAlert('Could not start experiment', 'error');
+        }
+      }
     }
   };
 
-  const handleStopExperiment = () => {
+  const handleStopExperiment = async () => {
     if (selectedExperiment) {
-      alert(`Stopping experiment: ${selectedExperiment}`);
-      // Add logic to stop the experiment
+      if (experimentsApi != null) {
+        try {
+          await experimentsApi.StopExperiment(selectedExperiment);
+          showAlert('Experiment stopped', 'info');
+        } catch (error) {
+          showAlert('Could not stop experiment', 'error');
+        }
+      }
     }
   };
 
   const handleLiveView = () => {
     if (selectedExperiment) {
       alert(`Viewing live data for experiment: ${selectedExperiment}`);
-      window.open(`/experiment/${selectedExperiment}/charts`, '_blank');
+      window.open(`/experiment/${selectedExperiment}/charts`, "_blank");
       // Add logic for live view
     }
   };
 
-  const handleDownloadResults = () => {
+  const handleDownloadResults = async () => {
     if (selectedExperiment) {
-      alert(`Downloading results for experiment: ${selectedExperiment}`);
-      // Add logic to download results
+      if (experimentsApi != null) {
+        try {
+          var response: Blob = await experimentsApi.DownloadExperimentData(selectedExperiment);
+          const blobUrl = window.URL.createObjectURL(response);
+
+          // Step 4: Create a download link and programmatically click it
+          const link = document.createElement('a');
+          link.href = blobUrl;
+
+          // Optionally, you can give the file a default name
+          link.download = 'downloaded-file.zip';
+
+          // Append the link to the document and click it to open the file save dialog
+          document.body.appendChild(link);
+          link.click();
+
+          // Clean up: Remove the link after triggering the download
+          document.body.removeChild(link);
+
+          // Release the blob URL after use
+          window.URL.revokeObjectURL(blobUrl);
+
+          showAlert('Experiment data downloaded', 'info');
+        } catch (error) {
+          showAlert('Could not download experiment data', 'error');
+        }
+      }
     }
   };
 
@@ -114,29 +177,35 @@ const ExperimentsPage: React.FC = () => {
     if (selectedExperiment) {
     }
   };
-  
-  const handleDeleteExperiment = () => {
+
+  const handleArchiveExperiment = async () => {
     if (selectedExperiment) {
-      alert(`Deleting experiment: ${selectedExperiment}`);
-      // Add logic to delete the experiment
+      if (experimentsApi != null) {
+        try {
+          await experimentsApi.ArchiveExperiment(selectedExperiment);
+          showAlert('Experiment archived', 'info');
+        } catch (error) {
+          showAlert('Could not archive experiment', 'error');
+        }
+      }
     }
   };
 
   // Animation for experiments
   const trail = useTrail(experiments.length, {
-    from: { opacity: 0, transform: 'scale(0.9)' },
-    to: { opacity: 1, transform: 'scale(1)' },
+    from: { opacity: 0, transform: "scale(0.9)" },
+    to: { opacity: 1, transform: "scale(1)" },
     config: { tension: 200, friction: 20 },
   });
 
   const getFloatingActionButtons = () => {
-    const experiment = experiments.find(exp => exp.id === selectedExperiment);
+    const experiment = experiments.find((exp) => exp.id === selectedExperiment);
 
     if (!experiment) return null;
 
     const status = getStatus(experiment);
 
-    if (status === 'Ended') {
+    if (status === "Ended") {
       return (
         <>
           <Zoom in={true}>
@@ -145,12 +214,20 @@ const ExperimentsPage: React.FC = () => {
             </Fab>
           </Zoom>
           <Zoom in={true}>
-            <Fab color="secondary" aria-label="download" onClick={handleDownloadResults}>
+            <Fab
+              color="secondary"
+              aria-label="download"
+              onClick={handleDownloadResults}
+            >
               <DownloadIcon />
             </Fab>
           </Zoom>
           <Zoom in={true}>
-            <Fab color="error" aria-label="delete" onClick={handleDeleteExperiment}>
+            <Fab
+              color="error"
+              aria-label="delete"
+              onClick={handleArchiveExperiment}
+            >
               <DeleteIcon />
             </Fab>
           </Zoom>
@@ -158,16 +235,24 @@ const ExperimentsPage: React.FC = () => {
       );
     }
 
-    if (status === 'Started') {
+    if (status === "Started") {
       return (
         <>
           <Zoom in={true}>
-            <Fab color="secondary" aria-label="stop" onClick={handleStopExperiment}>
+            <Fab
+              color="secondary"
+              aria-label="stop"
+              onClick={handleStopExperiment}
+            >
               <StopIcon />
             </Fab>
           </Zoom>
           <Zoom in={true}>
-            <Fab color="primary" aria-label="live view" onClick={handleLiveView}>
+            <Fab
+              color="primary"
+              aria-label="live view"
+              onClick={handleLiveView}
+            >
               <LiveViewIcon />
             </Fab>
           </Zoom>
@@ -175,10 +260,14 @@ const ExperimentsPage: React.FC = () => {
       );
     }
 
-    if (status === 'Created') {
+    if (status === "Created") {
       return (
         <Zoom in={true}>
-          <Fab color="primary" aria-label="start" onClick={handleStartExperiment}>
+          <Fab
+            color="primary"
+            aria-label="start"
+            onClick={handleStartExperiment}
+          >
             <StartIcon />
           </Fab>
         </Zoom>
@@ -197,21 +286,24 @@ const ExperimentsPage: React.FC = () => {
         {trail.map((animation, index) => (
           <Grid item xs={12} sm={6} md={4} key={experiments[index].id}>
             <animated.div style={{ ...animation, padding: theme.spacing(1) }}>
-              <ButtonBase onClick={() => handleCardClick(experiments[index].id)} sx={{ width: '100%' }}>
+              <ButtonBase
+                onClick={() => handleCardClick(experiments[index].id)}
+                sx={{ width: "100%" }}
+              >
                 <Box
                   ref={(el) => (cardRefs.current[index] = el!)}
                   sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    height: '100%',
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%",
                   }}
                 >
                   <GlowCard
                     selected={selectedExperiment === experiments[index].id}
                     theme={theme}
-                    maxHeight={maxHeight ?? 'auto'}
-                    maxWidth={maxWidth ?? 'auto'}
+                    maxHeight={maxHeight ?? "auto"}
+                    maxWidth={maxWidth ?? "auto"}
                   >
                     <CardMedia
                       component="img"
@@ -223,8 +315,11 @@ const ExperimentsPage: React.FC = () => {
                       <Typography variant="h6" component="div">
                         {experiments[index].id}
                       </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <StatusIndicator status={getStatus(experiments[index])} /> {/* Add StatusIndicator */}
+                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                        <StatusIndicator
+                          status={getStatus(experiments[index])}
+                        />{" "}
+                        {/* Add StatusIndicator */}
                         <Typography variant="body2" color="text.secondary">
                           Status: {getStatus(experiments[index])}
                         </Typography>
@@ -241,11 +336,11 @@ const ExperimentsPage: React.FC = () => {
       {/* Floating Action Buttons */}
       <Box
         sx={{
-          position: 'fixed',
+          position: "fixed",
           bottom: 16,
           right: 16,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           gap: 2,
           zIndex: 4, // Ensure FABs are on top of other elements
         }}

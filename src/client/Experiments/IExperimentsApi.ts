@@ -6,6 +6,7 @@ export interface IExperimentsApi {
     CreateExperiment : (deviceIds: string[], acquisitionMode: string | undefined, acquisitionConfigurationId: string | undefined) => Promise<Experiment>;
     DeleteExperiment : (experimentId: string) => Promise<void>;
     ArchiveExperiment : (experimentId: string) => Promise<Experiment>;
-    StartExperiment : (experimentId: string, duration: number | undefined) => Promise<void>;
+    StartExperiment : (experimentId: string, duration?: number | undefined) => Promise<void>;
     StopExperiment : (experimentId: string) => Promise<void>;
+    DownloadExperimentData : (experimentId: string) => Promise<Blob>
 }
