@@ -7,6 +7,7 @@ import RealTimeChartPage from 'pages/ChartPage';
 import LoadingScreen from 'pages/LoadingPage';
 import SignInPage from 'pages/SignInPage';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import SignUpPage from 'pages/SignupPage';
 
 function App() {
   const { client, brandClientTokenInfo, loading } = useBrandClientContext();
@@ -21,6 +22,7 @@ function App() {
     <div>
       <Routes>
         <Route path="/signin" element={!isAuthenticated ? <SignInPage /> : <Navigate to="/home" />} />
+        <Route path="/signup" element={!isAuthenticated ? <SignUpPage /> : <Navigate to="/home" />} /> 
         <Route path="/" element={<Navigate to={isAuthenticated ? "/home" : "/signin"} />} />
         <Route path="/home" element={isAuthenticated ? <AdminPanel /> : <Navigate to="/signin" />} />
         <Route path="/device-configuration/:deviceId" element={isAuthenticated ? <DeviceConfiguration /> : <Navigate to="/signin" />} />

@@ -14,13 +14,13 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
 import testImage from "assets/images/test.png";
-import ujLogo from "assets/images/logo_uj_eng.png";
 import { CssBaseline } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
-import { BrandClient } from "client/BrandClient";
 
 const SignInPage: React.FC = () => {
   const { client, brandClientTokenInfo, setBrandClientTokenInfo} = useBrandClientContext();
+  const navigate = useNavigate(); // For navigation between pages
 
   const validationSchema = Yup.object({
     email: Yup.string().email("Invalid email address").required("Email is required"),
@@ -158,14 +158,13 @@ const SignInPage: React.FC = () => {
                 >
                   Sign In
                 </Button>
-                <Grid container>
-                  <Grid item xs>
-                    <Link href="#" variant="body2">
-                      Forgot password?
-                    </Link>
-                  </Grid>
+                <Grid container justifyContent="center">
                   <Grid item>
-                    <Link href="#" variant="body2">
+                    <Link
+                      variant="body2"
+                      onClick={() => navigate("/signup")} // Navigate to SignUpPage
+                      sx={{ cursor: "pointer" }}
+                    >
                       {"Don't have an account? Sign Up"}
                     </Link>
                   </Grid>
