@@ -9,7 +9,9 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button
+  Button,
+  TextField,
+  Grid
 } from '@mui/material';
 import {
   LineChart,
@@ -34,6 +36,8 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
   const [dataPoints, setDataPoints] = useState<{ timestamp: string; value: number }[]>([]);
   const [tableData, setTableData] = useState<{ timestamp: string; value: number }[]>([]);
   const [chartScale, setChartScale] = useState<'linear' | 'log'>('linear');
+  const [lowerBound, setLowerBound] = useState<number | null>(null);
+  const [upperBound, setUpperBound] = useState<number | null>(null);
 
   const MAX_DISPLAY_POINTS = 50; // Number of points to display without shifting the chart
   const MAX_TABLE_ROWS = 1000; // Maximum number of rows in the table
@@ -59,7 +63,7 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
             const deserializedObject: NotificationData = notificationData;
             const newDataPoint = {
               timestamp: deserializedObject.timestamp,
-              value: parseInt(deserializedObject.serializedContent)
+              value: parseFloat(deserializedObject.serializedContent.split(' ')[1].trim())
             };
 
             setDataPoints((prev) => {
@@ -91,35 +95,76 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
     setChartScale((prevScale) => (prevScale === 'linear' ? 'log' : 'linear'));
   };
 
+  const handleLowerBoundChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setLowerBound(value);
+  };
+
+  const handleUpperBoundChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(event.target.value);
+    setUpperBound(value);
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Real-Time Experiment Data - {experimentId}
       </Typography>
 
-      <Box sx={{ mb: 3, height: 400 }}>
-        <Button variant="contained" onClick={handleToggleScale} sx={{ mb: 2 }}>
-          Toggle Y-Axis Scale (Current: {chartScale})
-        </Button>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dataPoints}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="timestamp" />
-            <YAxis scale={chartScale} />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#8884d8"
-              isAnimationActive={false}
-              dot={false} // No dots for individual points to keep the line smooth
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </Box>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item>
+          <Button variant="contained" onClick={handleToggleScale}>
+            Toggle Y-Axis Scale (Current: {chartScale})
+          </Button>
+        </Grid>
+        <Grid item>
+          <TextField
+            label="Lower Bound"
+            type="number"
+            value={lowerBound !== null ? lowerBound : ''}
+            onChange={handleLowerBoundChange}
+            inputProps={{ step: 'any' }}
+          />
+        </Grid>
+        <Grid item>
+          <TextField
+            label="Upper Bound"
+            type="number"
+            value={upperBound !== null ? upperBound : ''}
+            onChange={handleUpperBoundChange}
+            inputProps={{ step: 'any' }}
+          />
+        </Grid>
+      </Grid>
 
-      <Typography variant="h5" gutterBottom>
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart data={dataPoints}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="timestamp" /> {/* X-axis remains linear for timestamps */}
+          <YAxis
+            scale={chartScale}
+            domain={[
+              lowerBound !== null ? lowerBound : 'auto',
+              upperBound !== null ? upperBound : 'auto'
+            ]}
+            allowDataOverflow={chartScale === 'log'} 
+            tickFormatter={(tick) =>
+              chartScale === 'log' && tick <= 0 ? '' : tick
+            } // Handle zero and negative values in log scale
+          />
+          <Tooltip />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="#8884d8"
+            isAnimationActive={false}
+            dot={false} // No dots for individual points to keep the line smooth
+          />
+        </LineChart>
+      </ResponsiveContainer>
+
+      <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
         Data Table
       </Typography>
       <TableContainer component={Paper}>
