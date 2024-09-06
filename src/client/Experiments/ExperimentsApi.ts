@@ -25,10 +25,11 @@ export class ExperimentsApi implements IExperimentsApi {
         return response.data;
     };
     
-    CreateExperiment: (deviceIds: string[], acquisitionMode: string | undefined) => Promise<Experiment> = async (deviceIds: string[], acquisitionMode: string | undefined) => {
+    CreateExperiment: (deviceIds: string[], acquisitionMode: string | undefined, acquisitionConfigurationId: string | undefined) => Promise<Experiment> = async (deviceIds: string[], acquisitionMode: string | undefined, acquisitionConfigurationId: string | undefined) => {
         const response = await this.experimentsAxiosClient.post('', {
             deviceIds: deviceIds,
-            acquisitionMode: acquisitionMode
+            acquisitionMode: acquisitionMode,
+            acquisitionConfigurationId: acquisitionConfigurationId
         });
         const experiment = response.data;
         return experiment;

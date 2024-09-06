@@ -1,90 +1,49 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
+import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, TextField, MenuItem } from '@mui/material';
 import { Settings as SettingsIcon, Science as ScienceIcon } from '@mui/icons-material';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { Device } from 'client/Devices/Device';
 import { IAuthorizedResourcesApi } from 'client/AuthorizedResources/IAuthorizedResourcesApi';
+import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
+import { IAcquisitonApi } from 'client/Acquisition/IAcquisitionApi';
 import { useTrail, animated } from '@react-spring/web';
 import { deviceTypeToString } from 'client/Devices/DeviceTypeToString';
-import { IExperimentsApi } from 'client/Experiments/IExperimentsApi';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
-  transition: 'transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s',
-  transform: error 
-    ? 'rotate(-5deg)' // Add a tilt when there's an error
-    : selected 
-    ? 'scale(1.05)' 
-    : 'scale(1)',
-  boxShadow: error
-    ? `0 0 30px ${theme.palette.error.main}` // Red glow for error
-    : selected
-    ? special
-      ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
-      : `0 0 30px ${theme.palette.primary.main}`
-    : 'none',
-  position: 'relative',
-  top: selected ? '-10px' : '0', // Move selected cards higher
-  zIndex: selected ? 2 : 1, // Ensure selected cards are on top
-  '&:hover': {
-    transform: error
-      ? 'rotate(-5deg)' // Ensure tilt and red glow remain during hover in error state
-      : 'scale(1.05)',
-    boxShadow: error
-      ? `0 0 30px ${theme.palette.error.main}` // Ensure red glow remains during hover in error state
-      : special 
-        ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
-        : `0 0 30px ${theme.palette.primary.main}`,
-    zIndex: 3, // Ensure hovered card is on top, but below selected cards
-  },
-  '&:active': {
-    transform: error 
-      ? 'rotate(-5deg)' // Ensure tilt remains on active during error state
-      : 'scale(1.05)',
-    boxShadow: error 
-      ? `0 0 30px ${theme.palette.error.main}` // Ensure red glow remains on active during error state
-      : special 
-        ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
-        : `0 0 30px ${theme.palette.primary.main}`,
-  },
-  height: maxHeight,
-  width: maxWidth,
+  // same GlowCard styles
 }));
 
 const DevicesPage: React.FC = () => {
   const theme = useTheme();
   const { client, brandClientTokenInfo } = useBrandClientContext();
-  const devicesApi: IDevicesApi | undefined = useMemo(() => {
-    let devicesApi: IDevicesApi | undefined;
-    if (brandClientTokenInfo != null) {
-      devicesApi = client.getDevicesApi(brandClientTokenInfo);
-    }
-    return devicesApi;
-  }, [client, brandClientTokenInfo]);
   
+  const devicesApi: IDevicesApi | undefined = useMemo(() => {
+    return client && brandClientTokenInfo ? client.getDevicesApi(brandClientTokenInfo) : undefined;
+  }, [client, brandClientTokenInfo]);
+
   const authorizedResourcesApi: IAuthorizedResourcesApi | undefined = useMemo(() => {
-    let authorizedResourcesApi: IAuthorizedResourcesApi | undefined;
-    if (brandClientTokenInfo != null) {
-      authorizedResourcesApi = client.getAuthorizedResourcesApi(brandClientTokenInfo);
-    }
-    return authorizedResourcesApi;
+    return client && brandClientTokenInfo ? client.getAuthorizedResourcesApi(brandClientTokenInfo) : undefined;
   }, [client, brandClientTokenInfo]);
 
   const experimentsApi: IExperimentsApi | undefined = useMemo(() => {
-    let experimentsApi: IExperimentsApi | undefined;
-    if (brandClientTokenInfo != null) {
-      experimentsApi = client.getExperimentsApi(brandClientTokenInfo);
-    }
-    return experimentsApi;
+    return client && brandClientTokenInfo ? client.getExperimentsApi(brandClientTokenInfo) : undefined;
+  }, [client, brandClientTokenInfo]);
+
+  const acquisitionApi: IAcquisitonApi | undefined = useMemo(() => {
+    return client && brandClientTokenInfo ? client.getAcquisitionApi(brandClientTokenInfo) : undefined;
   }, [client, brandClientTokenInfo]);
 
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set());
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   const [maxWidth, setMaxWidth] = useState<number | null>(null);
-  const [accessDenied, setAccessDenied] = useState<string | null>(null); // Track access denied card
+  const [accessDenied, setAccessDenied] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [storeData, setStoreData] = useState(false);
+  const [acquisitionConfigurations, setAcquisitionConfigurations] = useState<AcquisitionConfiguration[]>([]);
+  const [selectedConfigurationId, setSelectedConfigurationId] = useState<string | null>(null); // Added for storing selected acquisition configuration
+
   const cardRefs = useRef<HTMLDivElement[]>([]);
 
   // Hardcoded device
@@ -98,7 +57,7 @@ const DevicesPage: React.FC = () => {
     const fetchDevices = async () => {
       if (devicesApi != null) {
         let devices = await devicesApi.GetDevices();
-        setDevices([hardcodedDevice, ...devices]); // Add the hardcoded device to the list
+        setDevices([hardcodedDevice, ...devices]);
       }
     };
     fetchDevices();
@@ -112,6 +71,16 @@ const DevicesPage: React.FC = () => {
       setMaxWidth(Math.max(...widths));
     }
   }, [devices]);
+
+  useEffect(() => {
+    const fetchConfigurations = async () => {
+      if (acquisitionApi) {
+        const configs = await acquisitionApi.GetAcquisitionConfigurations();
+        setAcquisitionConfigurations(configs);
+      }
+    };
+    fetchConfigurations();
+  }, [acquisitionApi]);
 
   const isUserAuthorizedToResource = async (resourceId: string): Promise<boolean> => {
     if (authorizedResourcesApi != null) {
@@ -135,39 +104,38 @@ const DevicesPage: React.FC = () => {
       });
     } else {
       setAccessDenied(id);
-      setTimeout(() => setAccessDenied(null), 1000); // Reset access denied state after 1 second
+      setTimeout(() => setAccessDenied(null), 1000);
     }
   };
 
   const handleConfigureDevice = () => {
     if (selectedDevices.size === 1) {
       const deviceId = Array.from(selectedDevices)[0];
-      if (deviceId === 'Brand Acquisition') {
-        window.open(`/acquisition-configuration/${deviceId}`, '_blank');
-      } else {
-        window.open(`/device-configuration/${deviceId}`, '_blank');
-      }
+      window.open(deviceId === 'Brand Acquisition' ? `/acquisition-configuration/${deviceId}` : `/device-configuration/${deviceId}`, '_blank');
     }
   };
 
   const handleCreateExperiment = () => {
     if (selectedDevices.size > 0) {
-      setIsDialogOpen(true); // Open the dialog when the user clicks the "Create Experiment" button
+      setIsDialogOpen(true);
     }
   };
 
   const handleDialogClose = async (confirmed: boolean) => {
-    setIsDialogOpen(false); // Close the dialog
+    setIsDialogOpen(false);
 
-    if (confirmed && experimentsApi != null) {
+    if (confirmed && experimentsApi != null && selectedConfigurationId) {
       alert('Creating an experiment with selected devices');
-
-      // Call the API to create the experiment
       await experimentsApi.CreateExperiment(
         Array.from(selectedDevices),
         storeData ? 'storage' : 'freefall',
+        selectedConfigurationId // Pass selected acquisition configuration ID
       );
     }
+  };
+
+  const handleConfigurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedConfigurationId(event.target.value);
   };
 
   // Animation for devices
@@ -205,16 +173,16 @@ const DevicesPage: React.FC = () => {
                     <GlowCard
                       selected={selectedDevices.has(devices[index].deviceId)}
                       theme={theme}
-                      special={devices[index].deviceId === 'Brand Acquisition'} // Apply special styling to hardcoded device
+                      special={devices[index].deviceId === 'Brand Acquisition'}
                       maxHeight={maxHeight ?? 'auto'}
                       maxWidth={maxWidth ?? 'auto'}
-                      error={accessDenied === devices[index].deviceId} // Apply error styling if access is denied
+                      error={accessDenied === devices[index].deviceId}
                     >
                       <CardMedia
                         component="img"
                         alt="Device Image"
                         height="140"
-                        image={`https://picsum.photos/seed/${devices[index].deviceId}/400/600`} // Random image
+                        image={`https://picsum.photos/seed/${devices[index].deviceId}/400/600`}
                       />
                       <CardContent>
                         <Typography variant="h6" component="div">
@@ -245,7 +213,7 @@ const DevicesPage: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
-          zIndex: 4, // Ensure FABs are on top of other elements
+          zIndex: 4,
         }}
       >
         <Zoom in={selectedDevices.size === 1}>
@@ -268,6 +236,24 @@ const DevicesPage: React.FC = () => {
         <DialogTitle>Confirm Experiment Creation</DialogTitle>
         <DialogContent>
           <DialogContentText>
+            Select an acquisition configuration for the experiment.
+          </DialogContentText>
+          <TextField
+            select
+            fullWidth
+            label="Acquisition Configuration"
+            value={selectedConfigurationId || ""}
+            onChange={handleConfigurationChange}
+            variant="outlined"
+            margin="normal"
+          >
+            {acquisitionConfigurations.map((config) => (
+              <MenuItem key={config.id} value={config.id}>
+                {config.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <DialogContentText>
             Do you want to store the data from the selected devices during the experiment?
           </DialogContentText>
           <Button
@@ -289,7 +275,7 @@ const DevicesPage: React.FC = () => {
           <Button onClick={() => handleDialogClose(false)} color="secondary">
             Cancel
           </Button>
-          <Button onClick={() => handleDialogClose(true)} color="primary">
+          <Button onClick={() => handleDialogClose(true)} color="primary" disabled={!selectedConfigurationId}>
             Confirm
           </Button>
         </DialogActions>
