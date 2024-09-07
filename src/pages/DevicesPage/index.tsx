@@ -10,6 +10,8 @@ import { IAcquisitonApi } from 'client/Acquisition/IAcquisitionApi';
 import { useTrail, animated } from '@react-spring/web';
 import { deviceTypeToString } from 'client/Devices/DeviceTypeToString';
 import { AcquisitionConfiguration } from 'client/Acquisition/AcquisitionConfiguration';
+import { useAlert } from 'components/Providers/AlertContext';
+import { Experiment } from 'client/Experiments/Experiment';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
   // same GlowCard styles
@@ -18,7 +20,8 @@ const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, 
 const DevicesPage: React.FC = () => {
   const theme = useTheme();
   const { client, brandClientTokenInfo } = useBrandClientContext();
-  
+  const { showAlert } = useAlert();
+
   const devicesApi: IDevicesApi | undefined = useMemo(() => {
     return client && brandClientTokenInfo ? client.getDevicesApi(brandClientTokenInfo) : undefined;
   }, [client, brandClientTokenInfo]);
@@ -56,8 +59,12 @@ const DevicesPage: React.FC = () => {
 
   const fetchDevices = async () => {
     if (devicesApi != null) {
-      let devices = await devicesApi.GetDevices();
-      setDevices([hardcodedDevice, ...devices]);
+      try{
+        const devices = await devicesApi.GetDevices();
+        setDevices([hardcodedDevice, ...devices]);
+      } catch(error) {
+        showAlert("Could not fetch devices from server.", "error");
+      }
     }
   };
 
@@ -77,8 +84,12 @@ const DevicesPage: React.FC = () => {
   useEffect(() => {
     const fetchConfigurations = async () => {
       if (acquisitionApi) {
-        const configs = await acquisitionApi.GetAcquisitionConfigurations();
-        setAcquisitionConfigurations(configs);
+        try{
+          const configs = await acquisitionApi.GetAcquisitionConfigurations();
+          setAcquisitionConfigurations(configs);
+        } catch (error) {
+          showAlert("Could not fetch acquisition configurations.", "error");
+        }
       }
     };
     fetchConfigurations();
@@ -127,12 +138,17 @@ const DevicesPage: React.FC = () => {
     setIsDialogOpen(false);
 
     if (confirmed && experimentsApi != null && selectedConfigurationId) {
-      alert('Creating an experiment with selected devices');
-      await experimentsApi.CreateExperiment(
-        Array.from(selectedDevices),
-        storeData ? 'storage' : 'freefall',
-        selectedConfigurationId // Pass selected acquisition configuration ID
-      );
+      // alert('Creating an experiment with selected devices');
+      try {
+        var response: Experiment = await experimentsApi.CreateExperiment(
+          Array.from(selectedDevices),
+          storeData ? 'storage' : 'freefall',
+          selectedConfigurationId // Pass selected acquisition configuration ID
+        );
+        showAlert(`Created new experiment with id: ${response.id}`, "success");
+      } catch(error){
+        showAlert("Could not create new experiment.", "error");
+      }
     }
   };
 

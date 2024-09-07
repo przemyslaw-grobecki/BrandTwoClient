@@ -5,9 +5,11 @@ import { Button, TextField, Box, Typography, Container, Paper, CssBaseline } fro
 import testImage from "assets/images/test.png";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
+import { useAlert } from "components/Providers/AlertContext";
 
 const SignUpPage: React.FC = () => {
   const { client } = useBrandClientContext();
+  const { showAlert } = useAlert();
   const navigate = useNavigate(); // For navigation between pages
 
   const validationSchema = Yup.object({
@@ -31,6 +33,7 @@ const SignUpPage: React.FC = () => {
         // Navigate to the SignInPage after successful sign up
         navigate("/signin"); 
       } catch (error) {
+        showAlert("Failed to register. Try again later.", "error");
         console.error("Failed to register", error);
       }
     },

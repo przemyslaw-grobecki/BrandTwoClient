@@ -7,9 +7,11 @@ import { IAcquisitonApi } from 'client/Acquisition/IAcquisitionApi';
 import { AcquisitionConfiguration } from 'client/Acquisition/AcquisitionConfiguration';
 import NewConfigurationDialog from 'components/NewConfigurationDialogComponent';
 import { useTheme } from '@mui/material/styles';
+import { useAlert } from 'components/Providers/AlertContext';
 
 const AcquisitionConfigurationPage: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
+  const { showAlert } = useAlert();
   const { deviceId } = useParams<{ deviceId: string }>();
   const theme = useTheme(); 
   const [configurations, setConfigurations] = useState<AcquisitionConfiguration[]>([]);
@@ -21,9 +23,13 @@ const AcquisitionConfigurationPage: React.FC = () => {
   useEffect(() => {
     const fetchConfigurations = async () => {
       if (client && brandClientTokenInfo) {
-        const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
-        const configs = await acquisitionApi.GetAcquisitionConfigurations();
-        setConfigurations(configs);
+        try{
+          const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
+          const configs = await acquisitionApi.GetAcquisitionConfigurations();
+          setConfigurations(configs);
+        } catch(error) {
+          showAlert("Could not fetch the acquisition configurations.", "error");
+        }
       }
     };
     fetchConfigurations();
@@ -37,10 +43,15 @@ const AcquisitionConfigurationPage: React.FC = () => {
 
   const handleAddNewConfiguration = async (name: string) => {
     if (client && brandClientTokenInfo) {
-      const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
-      const newConfig = await acquisitionApi.AddAcquisitionConfiguration(name);
-      setConfigurations([...configurations, newConfig]);
-      handleSelectConfiguration(newConfig); 
+      try{
+        const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
+        const newConfig = await acquisitionApi.AddAcquisitionConfiguration(name);
+        setConfigurations([...configurations, newConfig]);
+        handleSelectConfiguration(newConfig);
+        showAlert("Successfully added new acquisition configuration.", "success");
+      } catch(error) {
+        showAlert("Could not add new acquisition configuration.", "error");
+      }
     }
     setDialogOpen(false); 
   };
@@ -55,19 +66,23 @@ const AcquisitionConfigurationPage: React.FC = () => {
 
   const handleSaveConfiguration = async () => {
     if (client && brandClientTokenInfo && selectedConfiguration) {
-      const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
-      await acquisitionApi.EditAcquisitionConfiguration(selectedConfiguration.id, selectedConfiguration);
+      try {
+        const acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo) as IAcquisitonApi;
+        await acquisitionApi.EditAcquisitionConfiguration(selectedConfiguration.id, selectedConfiguration);
 
-      // Update the configurations list with the saved configuration
-      setConfigurations((prevConfigs) =>
-        prevConfigs.map((config) =>
-          config.id === selectedConfiguration.id ? selectedConfiguration : config
-        )
-      );
+        // Update the configurations list with the saved configuration
+        setConfigurations((prevConfigs) =>
+          prevConfigs.map((config) =>
+            config.id === selectedConfiguration.id ? selectedConfiguration : config
+          )
+        );
 
-      setOriginalConfiguration({ ...selectedConfiguration });
-      setIsSaveEnabled(false);
-      alert('Configuration saved successfully!');
+        setOriginalConfiguration({ ...selectedConfiguration });
+        setIsSaveEnabled(false);
+        showAlert("Successfuly editted acquisition configuration", "success");
+      } catch(error) {
+        showAlert("Could not edit acquisition configuration.", "error");
+      }
     }
   };
 

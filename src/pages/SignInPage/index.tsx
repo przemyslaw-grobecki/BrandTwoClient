@@ -17,9 +17,11 @@ import testImage from "assets/images/test.png";
 import { CssBaseline } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
+import { useAlert } from "components/Providers/AlertContext";
 
 const SignInPage: React.FC = () => {
   const { client, brandClientTokenInfo, setBrandClientTokenInfo} = useBrandClientContext();
+  const { showAlert } = useAlert();
   const navigate = useNavigate(); // For navigation between pages
 
   const validationSchema = Yup.object({
@@ -34,9 +36,12 @@ const SignInPage: React.FC = () => {
     },
     validationSchema: validationSchema,
     onSubmit: async (values) => {
-      let response = await client.Login(values.email, values.password);
-      setBrandClientTokenInfo(response);
-      console.log(response);
+      try {
+        let response = await client.Login(values.email, values.password);
+        setBrandClientTokenInfo(response);
+      }catch(error){
+        showAlert("Could not authenticate to the BRAND II server. Spróbuj wyłączyć i włączyć.", "error");
+      }
     },
   });
 
