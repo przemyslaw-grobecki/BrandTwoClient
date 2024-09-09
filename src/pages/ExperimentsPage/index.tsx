@@ -84,9 +84,13 @@ const ExperimentsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchExperiments = async () => {
-      if (experimentsApi != null) {
-        let experiments = await experimentsApi.GetRelevantExperiments();
-        setExperiments(experiments);
+      try{
+        if (experimentsApi != null) {
+          let experiments = await experimentsApi.GetRelevantExperiments();
+          setExperiments(experiments);
+        }
+      } catch(error) {
+        showAlert('Could not fetch active experiments. Try again later.', 'error');
       }
     };
     fetchExperiments();

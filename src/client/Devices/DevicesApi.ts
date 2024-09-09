@@ -16,6 +16,11 @@ export class DevicesApi implements IDevicesApi {
         });
     }
 
+    SetDeviceType: (deviceId: string, deviceType: number) => Promise<Device> = async (deviceId: string, deviceType: number) => {
+        var response = await this.devicesAxiosClient.post(`/${deviceId}` + '/SetDeviceType', { DeviceType: deviceType });
+        return response.data
+    };
+
     GetDevices: () => Promise<Device[]> = async () => {
         var response = await this.devicesAxiosClient.get('');
         var devices = response.data;
@@ -35,5 +40,5 @@ export class DevicesApi implements IDevicesApi {
     GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]> = async (deviceId: string) => {
         var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/options');
         return response.data;
-    }
+    };
 }

@@ -6,15 +6,18 @@ import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { DeviceOption } from 'client/Devices/DeviceOption';
 import { DeviceConfigurableOptionType } from 'client/Devices/DeviceOptionType';
 import { useTransition, animated } from '@react-spring/web';
+import LoadingScreen from 'pages/LoadingPage';
 
 const DeviceConfiguration: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
   const { deviceId } = useParams<{ deviceId: string }>();
   const [deviceConfigOptions, setDeviceConfigOptions] = useState<DeviceOption[]>([]);
   const [tempConfigValues, setTempConfigValues] = useState<{ [key: string]: string }>({});
+  const [deviceType, setDeviceType] = useState<number>(99); // Initial state for unknown device type
+  const [editDeviceType, setEditDeviceType] = useState<boolean>(false); // Toggle to edit device type
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const devicesApi: IDevicesApi | undefined = useMemo(() => {
     let devicesApi: IDevicesApi | undefined;
     if (brandClientTokenInfo != null) {
@@ -24,12 +27,29 @@ const DeviceConfiguration: React.FC = () => {
   }, [client, brandClientTokenInfo]);
 
   useEffect(() => {
-    const fetchDeviceConfigOptions = async () => {
+    const fetchDeviceDetails = async () => {
       if (devicesApi && deviceId) {
+        try {
+          const deviceDetails = await devicesApi.GetDevice(deviceId);
+          setDeviceType(deviceDetails.type); // Assume deviceType is part of device details
+          setLoading(false);
+        } catch (err) {
+          setError('Failed to load device details.');
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDeviceDetails();
+  }, [devicesApi, deviceId]);
+
+  useEffect(() => {
+    const fetchDeviceConfigOptions = async () => {
+      if (devicesApi && deviceId && deviceType !== 99) {
         try {
           const options = await devicesApi.GetDeviceOptions(deviceId);
           setDeviceConfigOptions(options);
-          // Initialize the temporary state with the current values
+
           const initialValues = options.reduce((acc, option) => {
             acc[option.id] = option.value;
             return acc;
@@ -37,14 +57,14 @@ const DeviceConfiguration: React.FC = () => {
           setTempConfigValues(initialValues);
         } catch (err) {
           setError('Failed to load device configuration options.');
-        } finally {
-          setLoading(false);
         }
       }
     };
 
-    fetchDeviceConfigOptions();
-  }, [devicesApi, deviceId]);
+    if (deviceType !== 99) {
+      fetchDeviceConfigOptions();
+    }
+  }, [devicesApi, deviceId, deviceType]);
 
   const handleOptionChange = (optionId: string, newValue: string) => {
     setTempConfigValues((prevValues) => ({
@@ -54,19 +74,30 @@ const DeviceConfiguration: React.FC = () => {
   };
 
   const handleSaveConfiguration = () => {
-    // Implement save logic here, using tempConfigValues
     console.log('Saving configuration:', tempConfigValues);
     alert('Device configuration saved!');
+  };
+
+  const handleDeviceTypeChange = async (newType: number) => {
+    if (deviceId != null) {
+      try {
+        await devicesApi?.SetDeviceType(deviceId, newType); // Call API to update device type
+        setDeviceType(newType);
+        setEditDeviceType(false); // Disable editing after save
+      } catch (err) {
+        setError('Failed to update device type.');
+      }
+    }
   };
 
   const transitions = useTransition(deviceConfigOptions, {
     from: { opacity: 0, transform: 'translateY(20px)' },
     enter: { opacity: 1, transform: 'translateY(0px)' },
     leave: { opacity: 0, transform: 'translateY(20px)' },
-    keys: deviceConfigOptions.map(option => option.id),
+    keys: deviceConfigOptions.map((option) => option.id),
   });
 
-  if (loading) return <Typography>Loading...</Typography>;
+  if (loading) return <LoadingScreen />;
   if (error) return <Typography color="error">{error}</Typography>;
 
   return (
@@ -74,6 +105,40 @@ const DeviceConfiguration: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Configure Device: {deviceId}
       </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6">Device Type</Typography>
+        {editDeviceType ? (
+          <TextField
+            select
+            fullWidth
+            label="Device Type"
+            value={deviceType}
+            onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
+            variant="outlined"
+          >
+            <MenuItem value={0}>Brand Device</MenuItem>
+            <MenuItem value={1}>Pressure Sensor</MenuItem>
+            <MenuItem value={2}>Mock Device</MenuItem>
+            {/* Add more device types as needed */}
+          </TextField>
+        ) : (
+          <Typography variant="body1">
+            {deviceType === 0 && "Brand Device"}
+            {deviceType === 1 && "Pressure Sensor"}
+            {deviceType === 2 && "Mock Device"}
+            {/* Add more cases for other device types */}
+          </Typography>
+        )}
+        <Button
+          variant="text"
+          onClick={() => setEditDeviceType((prev) => !prev)} // Toggle between edit mode and display mode
+          sx={{ mt: 1 }}
+        >
+          {editDeviceType ? "Cancel" : "Change Device Type"}
+        </Button>
+      </Box>
+
       {transitions((style, option) => (
         <animated.div style={style} key={option.id}>
           <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -91,6 +156,7 @@ const DeviceConfiguration: React.FC = () => {
           </Box>
         </animated.div>
       ))}
+
       <Box sx={{ mt: 2 }}>
         <Button variant="contained" color="primary" onClick={handleSaveConfiguration}>
           Save Configuration

@@ -14,7 +14,45 @@ import { useAlert } from 'components/Providers/AlertContext';
 import { Experiment } from 'client/Experiments/Experiment';
 
 const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, error }: { theme: any; selected: boolean; special?: boolean; maxHeight: number; maxWidth: number; error: boolean }) => ({
-  // same GlowCard styles
+  transition: 'transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s',
+  transform: error 
+    ? 'rotate(-5deg)' // Add a tilt when there's an error
+    : selected 
+    ? 'scale(1.05)' 
+    : 'scale(1)',
+  boxShadow: error
+    ? `0 0 30px ${theme.palette.error.main}` // Red glow for error
+    : selected
+    ? special
+      ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
+      : `0 0 30px ${theme.palette.primary.main}`
+    : 'none',
+  position: 'relative',
+  top: selected ? '-10px' : '0', // Move selected cards higher
+  zIndex: selected ? 2 : 1, // Ensure selected cards are on top
+  '&:hover': {
+    transform: error
+      ? 'rotate(-5deg)' // Ensure tilt and red glow remain during hover in error state
+      : 'scale(1.05)',
+    boxShadow: error
+      ? `0 0 30px ${theme.palette.error.main}` // Ensure red glow remains during hover in error state
+      : special 
+        ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
+        : `0 0 30px ${theme.palette.primary.main}`,
+    zIndex: 3, // Ensure hovered card is on top, but below selected cards
+  },
+  '&:active': {
+    transform: error 
+      ? 'rotate(-5deg)' // Ensure tilt remains on active during error state
+      : 'scale(1.05)',
+    boxShadow: error 
+      ? `0 0 30px ${theme.palette.error.main}` // Ensure red glow remains on active during error state
+      : special 
+        ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
+        : `0 0 30px ${theme.palette.primary.main}`,
+  },
+  height: maxHeight,
+  width: maxWidth,
 }));
 
 const DevicesPage: React.FC = () => {
