@@ -177,6 +177,18 @@ const ExperimentsPage: React.FC = () => {
     }
   };
 
+  const handleDeleteExperiment = async () => {
+    if (experimentsApi && selectedExperiment) {
+      try{
+        await experimentsApi.DeleteExperiment(selectedExperiment);
+        setExperiments(experiments.filter(exp => exp.id !== selectedExperiment));
+        showAlert("Sucessfully deleted archived experiment. Data will no longer be accessible.", "success");
+      } catch(error) {
+        showAlert("Could not delete archived experiment. Try again later.", "error");
+      }
+    }
+  };
+
   const handleViewCharts = () => {
     if (selectedExperiment) {
     }
@@ -204,11 +216,11 @@ const ExperimentsPage: React.FC = () => {
 
   const getFloatingActionButtons = () => {
     const experiment = experiments.find((exp) => exp.id === selectedExperiment);
-
+  
     if (!experiment) return null;
-
+  
     const status = getStatus(experiment);
-
+  
     if (status === "Ended") {
       return (
         <>
@@ -238,7 +250,7 @@ const ExperimentsPage: React.FC = () => {
         </>
       );
     }
-
+  
     if (status === "Started") {
       return (
         <>
@@ -263,23 +275,35 @@ const ExperimentsPage: React.FC = () => {
         </>
       );
     }
-
+  
     if (status === "Created") {
       return (
-        <Zoom in={true}>
-          <Fab
-            color="primary"
-            aria-label="start"
-            onClick={handleStartExperiment}
-          >
-            <StartIcon />
-          </Fab>
-        </Zoom>
+        <>
+          <Zoom in={true}>
+            <Fab
+              color="primary"
+              aria-label="start"
+              onClick={handleStartExperiment}
+            >
+              <StartIcon />
+            </Fab>
+          </Zoom>
+          <Zoom in={true}>
+            <Fab
+              color="error"
+              aria-label="delete"
+              onClick={handleDeleteExperiment}
+            >
+              <DeleteIcon />
+            </Fab>
+          </Zoom>
+        </>
       );
     }
-
+  
     return null;
   };
+  
 
   return (
     <div>

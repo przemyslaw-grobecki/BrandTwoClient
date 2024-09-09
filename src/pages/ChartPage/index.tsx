@@ -11,7 +11,7 @@ import {
   Paper,
   Button,
   TextField,
-  Grid
+  Grid,
 } from '@mui/material';
 import {
   LineChart,
@@ -21,20 +21,31 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import { HubConnectionBuilder, HubConnection } from '@microsoft/signalr';
 import { gateway } from 'development-settings.json';
 
 interface NotificationData {
+  topic: string;
   serializedContent: string;
   timestamp: string;
 }
 
-const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId }) => {
+interface DataPoint {
+  timestamp: string;
+  value: number;
+}
+
+interface DeviceData {
+  deviceId: string;
+  dataPoints: DataPoint[];
+  tableData: DataPoint[];
+}
+
+const RealTimeChartPage: React.FC<{ deviceIds: string[] }> = ({ deviceIds }) => {
   const [connection, setConnection] = useState<HubConnection | null>(null);
-  const [dataPoints, setDataPoints] = useState<{ timestamp: string; value: number }[]>([]);
-  const [tableData, setTableData] = useState<{ timestamp: string; value: number }[]>([]);
+  const [deviceData, setDeviceData] = useState<DeviceData[]>([]);
   const [chartScale, setChartScale] = useState<'linear' | 'log'>('linear');
   const [lowerBound, setLowerBound] = useState<number | null>(null);
   const [upperBound, setUpperBound] = useState<number | null>(null);
@@ -44,14 +55,14 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
 
   useEffect(() => {
     const newConnection = new HubConnectionBuilder()
-      .withUrl(`${gateway}/signalr-endpoint?experimentId=${experimentId}`, {
-        withCredentials: false
+      .withUrl(`${gateway}/signalr-endpoint`, {
+        withCredentials: false,
       })
       .withAutomaticReconnect()
       .build();
 
     setConnection(newConnection);
-  }, [experimentId]);
+  }, []);
 
   useEffect(() => {
     if (connection) {
@@ -59,28 +70,47 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
         .start()
         .then(() => {
           console.log('Connected to SignalR');
-          connection.on('ReceiveData', (notificationData: any) => {
-            const deserializedObject: NotificationData = notificationData;
+          connection.on('ReceiveData', (notificationData: NotificationData) => {
+            const [receivedDeviceId, dataPurpose] = notificationData.topic.split('#');
             const newDataPoint = {
-              timestamp: deserializedObject.timestamp,
-              value: parseFloat(deserializedObject.serializedContent.split(' ')[1].trim())
+              timestamp: notificationData.timestamp,
+              value: parseFloat(notificationData.serializedContent.split(' ')[1].trim()),
             };
 
-            setDataPoints((prev) => {
-              const updatedData = [...prev, newDataPoint];
-              if (updatedData.length > MAX_DISPLAY_POINTS) {
-                return updatedData.slice(-MAX_DISPLAY_POINTS);
-              }
-              return updatedData;
-            });
+            if (deviceIds.includes(receivedDeviceId) && dataPurpose === 'data') {
+              setDeviceData((prevDeviceData) => {
+                const updatedDeviceData = prevDeviceData.map((device) => {
+                  if (device.deviceId === receivedDeviceId) {
+                    const updatedDataPoints = [...device.dataPoints, newDataPoint];
+                    const updatedTableData = [...device.tableData, newDataPoint];
 
-            setTableData((prev) => {
-              const updatedTableData = [...prev, newDataPoint];
-              if (updatedTableData.length > MAX_TABLE_ROWS) {
-                return updatedTableData.slice(-MAX_TABLE_ROWS);
-              }
-              return updatedTableData;
-            });
+                    return {
+                      ...device,
+                      dataPoints:
+                        updatedDataPoints.length > MAX_DISPLAY_POINTS
+                          ? updatedDataPoints.slice(-MAX_DISPLAY_POINTS)
+                          : updatedDataPoints,
+                      tableData:
+                        updatedTableData.length > MAX_TABLE_ROWS
+                          ? updatedTableData.slice(-MAX_TABLE_ROWS)
+                          : updatedTableData,
+                    };
+                  }
+                  return device;
+                });
+
+                // If no data exists for this device, add it
+                if (!updatedDeviceData.find((device) => device.deviceId === receivedDeviceId)) {
+                  updatedDeviceData.push({
+                    deviceId: receivedDeviceId,
+                    dataPoints: [newDataPoint],
+                    tableData: [newDataPoint],
+                  });
+                }
+
+                return updatedDeviceData;
+              });
+            }
           });
         })
         .catch((error) => console.log('Connection failed: ', error));
@@ -89,7 +119,7 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
         connection.stop();
       };
     }
-  }, [connection]);
+  }, [connection, deviceIds]);
 
   const handleToggleScale = () => {
     setChartScale((prevScale) => (prevScale === 'linear' ? 'log' : 'linear'));
@@ -108,7 +138,7 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        Real-Time Experiment Data - {experimentId}
+        Real-Time Experiment Data
       </Typography>
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -137,54 +167,61 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({ experimentId })
         </Grid>
       </Grid>
 
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={dataPoints}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="timestamp" /> {/* X-axis remains linear for timestamps */}
-          <YAxis
-            scale={chartScale}
-            domain={[
-              lowerBound !== null ? lowerBound : 'auto',
-              upperBound !== null ? upperBound : 'auto'
-            ]}
-            allowDataOverflow={chartScale === 'log'} 
-            tickFormatter={(tick) =>
-              chartScale === 'log' && tick <= 0 ? '' : tick
-            } // Handle zero and negative values in log scale
-          />
-          <Tooltip />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke="#8884d8"
-            isAnimationActive={false}
-            dot={false} // No dots for individual points to keep the line smooth
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {/* Render charts for each device */}
+      {deviceData.map((device) => (
+        <Box key={device.deviceId} sx={{ mb: 5 }}>
+          <Typography variant="h5" gutterBottom>
+            Device ID: {device.deviceId}
+          </Typography>
 
-      <Typography variant="h5" gutterBottom sx={{ mt: 3 }}>
-        Data Table
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Time</TableCell>
-              <TableCell align="right">Value</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tableData.map((row, index) => (
-              <TableRow key={index}>
-                <TableCell>{row.timestamp}</TableCell>
-                <TableCell align="right">{row.value}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={device.dataPoints}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="timestamp" />
+              <YAxis
+                scale={chartScale}
+                domain={[
+                  lowerBound !== null ? lowerBound : 'auto',
+                  upperBound !== null ? upperBound : 'auto',
+                ]}
+                allowDataOverflow={chartScale === 'log'}
+                tickFormatter={(tick) => (chartScale === 'log' && tick <= 0 ? '' : tick)}
+              />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#8884d8"
+                isAnimationActive={false}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+
+          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+            Data Table for Device: {device.deviceId}
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Time</TableCell>
+                  <TableCell align="right">Value</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {device.tableData.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{row.timestamp}</TableCell>
+                    <TableCell align="right">{row.value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+      ))}
     </Box>
   );
 };
