@@ -13,7 +13,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
-import testImage from "assets/images/test.png";
+import backgroundImage from "assets/images/login_background.jpg";
 import { CssBaseline } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
@@ -50,7 +50,7 @@ const SignInPage: React.FC = () => {
       <CssBaseline />
       <Box
         sx={{
-          backgroundImage: `url(${testImage})`,
+          backgroundImage: `url(${backgroundImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           height: "100vh",

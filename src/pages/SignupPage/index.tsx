@@ -2,7 +2,7 @@ import React from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Button, TextField, Box, Typography, Container, Paper, CssBaseline } from "@mui/material";
-import testImage from "assets/images/test.png";
+import backgroundImage from "assets/images/login_background.jpg";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import { useAlert } from "components/Providers/AlertContext";
@@ -44,7 +44,7 @@ const SignUpPage: React.FC = () => {
       <CssBaseline />
       <Box
         sx={{
-          backgroundImage: `url(${testImage})`,
+          backgroundImage: `url(${backgroundImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           height: "100vh",
@@ -61,12 +61,19 @@ const SignUpPage: React.FC = () => {
             mt: 15,
           }}
         >
+          {/* Add the "Brand Two" gradient box from the login page */}
           <Paper
-            elevation={12}
+            elevation={0}
             sx={{
-              padding: 4,
-              position: "relative",
-              zIndex: 0,
+              position: "absolute",
+              top: -30,
+              left: "50%",
+              transform: "translateX(-50%)",
+              padding: 2,
+              width: "78%",
+              zIndex: 1,
+              background: "linear-gradient(135deg, #1976d2 0%, #2a5298 100%)",
+              color: "white",
             }}
           >
             <Box
@@ -79,6 +86,25 @@ const SignUpPage: React.FC = () => {
               <Typography component="h1" variant="h5">
                 Sign Up
               </Typography>
+            </Box>
+          </Paper>
+
+          <Paper
+            elevation={12}
+            sx={{
+              padding: 4,
+              paddingTop: 8, // Make sure there is space for the floating paper
+              position: "relative",
+              zIndex: 0, // Ensure this is below the top paper
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
               <Box
                 component="form"
                 onSubmit={formik.handleSubmit}

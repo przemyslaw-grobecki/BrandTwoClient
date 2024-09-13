@@ -176,7 +176,6 @@ const DevicesPage: React.FC = () => {
     setIsDialogOpen(false);
 
     if (confirmed && experimentsApi != null && selectedConfigurationId) {
-      // alert('Creating an experiment with selected devices');
       try {
         var response: Experiment = await experimentsApi.CreateExperiment(
           Array.from(selectedDevices),
@@ -201,18 +200,24 @@ const DevicesPage: React.FC = () => {
     config: { tension: 200, friction: 20 },
   });
 
+  // Function to get image based on device type
+  const getImageForDeviceType = (type: number) => {
+    switch (type) {
+      case 7:
+        return '/src/assets/images/acquisition.jpg';
+      case 0:
+        return '/src/assets/images/sum_img.jpg';
+      case 1:
+        return '/src/assets/images/vacuum_meter.jpg'; // Replace with the correct path
+      case 2:
+        return '/src/assets/images/mock_device.png';
+      default:
+        return `https://picsum.photos/seed/${type}/400/600`; // Default image
+    }
+  };
+
   return (
     <div>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="h4" gutterBottom>
-          Devices
-        </Typography>
-        {/* Refresh button */}
-        <IconButton onClick={fetchDevices} color="primary">
-          <RefreshIcon />
-        </IconButton>
-      </Box>
-
       <Grid container spacing={3}>
         {trail.map((animation, index) => (
           <Grid item xs={12} sm={6} md={4} key={devices[index].deviceId}>
@@ -245,7 +250,7 @@ const DevicesPage: React.FC = () => {
                         component="img"
                         alt="Device Image"
                         height="140"
-                        image={`https://picsum.photos/seed/${devices[index].deviceId}/400/600`}
+                        image={getImageForDeviceType(devices[index].type)} // Use the function to get image
                       />
                       <CardContent>
                         <Typography variant="h6" component="div">
@@ -267,7 +272,7 @@ const DevicesPage: React.FC = () => {
         ))}
       </Grid>
 
-      {/* Floating Action Buttons */}
+      {/* Floating Action Buttons, starting with Refresh */}
       <Box
         sx={{
           position: 'fixed',
@@ -279,14 +284,23 @@ const DevicesPage: React.FC = () => {
           zIndex: 4,
         }}
       >
+
+        {/* Configure Device Button (visible only if 1 device selected) */}
         <Zoom in={selectedDevices.size === 1}>
-          <Fab color="primary" aria-label="configure" onClick={handleConfigureDevice}>
+          <Fab color="secondary" aria-label="configure" onClick={handleConfigureDevice}>
             <SettingsIcon />
           </Fab>
         </Zoom>
+        {/* Create Experiment Button (visible only if 1 or more devices selected) */}
         <Zoom in={selectedDevices.size > 0}>
           <Fab color="secondary" aria-label="create experiment" onClick={handleCreateExperiment}>
             <ScienceIcon />
+          </Fab>
+        </Zoom>
+        {/* Always visible Refresh button */}
+        <Zoom in={true}>
+          <Fab color="primary" aria-label="refresh" onClick={fetchDevices}>
+            <RefreshIcon />
           </Fab>
         </Zoom>
       </Box>
