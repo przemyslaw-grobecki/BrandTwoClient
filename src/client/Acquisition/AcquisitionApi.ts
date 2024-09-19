@@ -3,6 +3,7 @@ import { IAcquisitonApi } from "./IAcquisitionApi";
 import { AcquisitionConfiguration } from "./AcquisitionConfiguration";
 import { BrandClientTokenInfo } from "client/BrandClientConnectionInfo";
 import { AcquisitionConfigurationPatch } from "./AcquisitionConfigurationPatch";
+import { StorageItem } from "./StorageItem";
 
 export class AcquisitionApi implements IAcquisitonApi {
     acquisitionAxiosClient: AxiosInstance;
@@ -15,6 +16,26 @@ export class AcquisitionApi implements IAcquisitonApi {
             }
         });
     }
+    
+    StartDeviceDataStoring: (experimentId: string, subscriptionTopic: string) => Promise<void> = async (experimentId: string, subscriptionTopic: string) => {
+        var _ = await this.acquisitionAxiosClient.post('StartDeviceDataStoring', {
+            experimentId: experimentId,
+            subscriptionTopic: subscriptionTopic
+        });
+    };
+    
+    StopDeviceDataStoring: (configurationId: string, subscriptionTopic: string) => Promise<string> = async (configurationId: string, subscriptionTopic: string) => {
+        var response = await this.acquisitionAxiosClient.post('StopDeviceDataStoring', {
+            configurationId: configurationId,
+            subscriptionTopic: subscriptionTopic
+        });
+        return response.data;
+    };
+    
+    GetStoredDataForSession: (sessionId: string) => Promise<StorageItem[]> = async (sessionId: string) => {
+        var response = await this.acquisitionAxiosClient.get(`storage/GetItemsStoredDuringSession/${sessionId}`);
+        return response.data;
+    };
 
     AddAcquisitionConfiguration: (configurationName: string) => Promise<AcquisitionConfiguration> = async (configurationName: string) => {
         var response = await this.acquisitionAxiosClient.post('configurations', { name: configurationName });
@@ -29,6 +50,5 @@ export class AcquisitionApi implements IAcquisitonApi {
     GetAcquisitionConfigurations: () => Promise<AcquisitionConfiguration[]> = async () => {
         var response = await this.acquisitionAxiosClient.get('configurations');
         return response.data;
-    }
-
+    };
 }

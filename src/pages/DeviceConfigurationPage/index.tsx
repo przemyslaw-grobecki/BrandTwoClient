@@ -1,5 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Switch, Slider, TextField, MenuItem, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Switch,
+  Slider,
+  TextField,
+  MenuItem,
+  Button,
+  ToggleButton,
+  ToggleButtonGroup,
+  CssBaseline,
+  Tooltip,
+  Divider
+} from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
@@ -7,16 +20,20 @@ import { DeviceOption } from 'client/Devices/DeviceOption';
 import { DeviceConfigurableOptionType } from 'client/Devices/DeviceOptionType';
 import { useTransition, animated } from '@react-spring/web';
 import LoadingScreen from 'pages/LoadingPage';
+import { useTheme } from '@mui/material/styles';
+import { DeviceCommand } from 'client/Devices/DeviceCommand';
 
 const DeviceConfiguration: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
   const { deviceId } = useParams<{ deviceId: string }>();
   const [deviceConfigOptions, setDeviceConfigOptions] = useState<DeviceOption[]>([]);
+  const [deviceCommands, setDeviceCommands] = useState<DeviceCommand[]>([]);
   const [tempConfigValues, setTempConfigValues] = useState<{ [key: string]: string }>({});
-  const [deviceType, setDeviceType] = useState<number>(99); // Initial state for unknown device type
-  const [editDeviceType, setEditDeviceType] = useState<boolean>(false); // Toggle to edit device type
+  const [deviceType, setDeviceType] = useState<number>(99); 
+  const [editDeviceType, setEditDeviceType] = useState<boolean>(false); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
 
   const devicesApi: IDevicesApi | undefined = useMemo(() => {
     let devicesApi: IDevicesApi | undefined;
@@ -27,44 +44,76 @@ const DeviceConfiguration: React.FC = () => {
   }, [client, brandClientTokenInfo]);
 
   useEffect(() => {
-    const fetchDeviceDetails = async () => {
-      if (devicesApi && deviceId) {
-        try {
-          const deviceDetails = await devicesApi.GetDevice(deviceId);
-          setDeviceType(deviceDetails.type); // Assume deviceType is part of device details
-          setLoading(false);
-        } catch (err) {
-          setError('Failed to load device details.');
-          setLoading(false);
-        }
-      }
-    };
-
     fetchDeviceDetails();
   }, [devicesApi, deviceId]);
 
   useEffect(() => {
-    const fetchDeviceConfigOptions = async () => {
-      if (devicesApi && deviceId && deviceType !== 99) {
-        try {
-          const options = await devicesApi.GetDeviceOptions(deviceId);
-          setDeviceConfigOptions(options);
-
-          const initialValues = options.reduce((acc, option) => {
-            acc[option.id] = option.value;
-            return acc;
-          }, {} as { [key: string]: string });
-          setTempConfigValues(initialValues);
-        } catch (err) {
-          setError('Failed to load device configuration options.');
-        }
-      }
-    };
-
     if (deviceType !== 99) {
       fetchDeviceConfigOptions();
     }
   }, [devicesApi, deviceId, deviceType]);
+
+  // Function to fetch device details
+  const fetchDeviceDetails = async () => {
+    if (devicesApi && deviceId) {
+      try {
+        const deviceDetails = await devicesApi.GetDevice(deviceId);
+        setDeviceType(deviceDetails.type); 
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load device details.');
+        setLoading(false);
+      }
+    }
+  };
+
+  // Function to fetch device configuration options and commands
+  const fetchDeviceConfigOptions = async () => {
+    if (devicesApi && deviceId && deviceType !== 99) {
+      try {
+        const options: DeviceOption[] = await devicesApi.GetDeviceOptions(deviceId);
+        const commands: DeviceCommand[] = await devicesApi.GetDeviceCommands(deviceId);
+        setDeviceConfigOptions(options);
+        setDeviceCommands(commands);
+
+        const initialValues = options.reduce((acc, option) => {
+          acc[option.id] = getUnknownStateForOption(option.optionType, option.availableValues);
+          return acc;
+        }, {} as { [key: string]: string });
+        setTempConfigValues(initialValues);
+      } catch (err) {
+        setError('Failed to load device configuration options.');
+      }
+    }
+  };
+
+  const getUnknownStateForOption = (optionType: DeviceConfigurableOptionType, availableValues: string) => {
+    switch (optionType) {
+      case DeviceConfigurableOptionType.SWITCH:
+        const switchValues = availableValues.split(';');
+        return switchValues[0]; // Default to the first option in the switch
+
+      case DeviceConfigurableOptionType.RANGE:
+        return '0'; // Default to minimum range value
+
+      case DeviceConfigurableOptionType.TEXT:
+        return ''; // Default to empty text
+
+      case DeviceConfigurableOptionType.LIST:
+        const listValues = availableValues.split(';');
+        return listValues[0]; // Default to the first option in the list
+
+      case DeviceConfigurableOptionType.BINARY:
+        const bitCount = Number(availableValues);
+        return '0'.repeat(bitCount); // Default to all zeroes
+
+      case DeviceConfigurableOptionType.READONLY:
+        return 'unknown'; // Default to 'unknown' for readonly options
+
+      default:
+        return 'unknown'; // Fallback for unknown option types
+    }
+  };
 
   const handleOptionChange = (optionId: string, newValue: string) => {
     setTempConfigValues((prevValues) => ({
@@ -81,9 +130,9 @@ const DeviceConfiguration: React.FC = () => {
   const handleDeviceTypeChange = async (newType: number) => {
     if (deviceId != null) {
       try {
-        await devicesApi?.SetDeviceType(deviceId, newType); // Call API to update device type
+        await devicesApi?.SetDeviceType(deviceId, newType); 
         setDeviceType(newType);
-        setEditDeviceType(false); // Disable editing after save
+        setEditDeviceType(false); 
       } catch (err) {
         setError('Failed to update device type.');
       }
@@ -97,75 +146,157 @@ const DeviceConfiguration: React.FC = () => {
     keys: deviceConfigOptions.map((option) => option.id),
   });
 
+  // Handle button clicks for commands
+  const handleCommandClick = (command: DeviceCommand) => {
+    console.log('Executing command:', command);
+    alert(`Command ${command.name} executed!`);
+  };
+
+  // Handle the refresh action
+  const handleRefresh = async () => {
+    setLoading(true); // Optional: show loading while fetching new data
+    await fetchDeviceConfigOptions(); // Fetch latest configuration options and commands
+    setLoading(false);
+  };
+
   if (loading) return <LoadingScreen />;
   if (error) return <Typography color="error">{error}</Typography>;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Configure Device: {deviceId}
-      </Typography>
-
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6">Device Type</Typography>
-        {editDeviceType ? (
-          <TextField
-            select
-            fullWidth
-            label="Device Type"
-            value={deviceType}
-            onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
-            variant="outlined"
-          >
-            <MenuItem value={0}>Brand Device</MenuItem>
-            <MenuItem value={1}>Pressure Sensor</MenuItem>
-            <MenuItem value={2}>Mock Device</MenuItem>
-            {/* Add more device types as needed */}
-          </TextField>
-        ) : (
-          <Typography variant="body1">
-            {deviceType === 0 && "Brand Device"}
-            {deviceType === 1 && "Pressure Sensor"}
-            {deviceType === 2 && "Mock Device"}
-            {/* Add more cases for other device types */}
-          </Typography>
-        )}
-        <Button
-          variant="text"
-          onClick={() => setEditDeviceType((prev) => !prev)} // Toggle between edit mode and display mode
-          sx={{ mt: 1 }}
+    <>
+    <CssBaseline/>
+      <Box
+        sx={{
+          p: 0,
+          minHeight: '100vh',
+          width: '100vw',
+          background: `url(/src/assets/images/login_background.jpg) no-repeat center center fixed`,
+          backgroundSize: 'cover',
+        }}
+      >
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: '1200px',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: '10px',
+            padding: '30px',
+            margin: '0 auto',
+            color: 'black'
+          }}
         >
-          {editDeviceType ? "Cancel" : "Change Device Type"}
-        </Button>
-      </Box>
+          <Typography variant="h4" gutterBottom sx={{ color: '#2a5298', fontWeight: 'bold' }}>
+            Configure Device: {deviceId}
+          </Typography>
 
-      {transitions((style, option) => (
-        <animated.div style={style} key={option.id}>
-          <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
-                {option.name}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ color: '#2a5298' }}>Device Type</Typography>
+            {editDeviceType ? (
+              <TextField
+                select
+                fullWidth
+                label="Device Type"
+                value={deviceType}
+                onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
+                variant="outlined"
+                sx={{ backgroundColor: '#fff', borderRadius: '5px' }}
+              >
+                <MenuItem value={0}>Brand Device</MenuItem>
+                <MenuItem value={1}>Pressure Sensor</MenuItem>
+                <MenuItem value={2}>Mock Device</MenuItem>
+              </TextField>
+            ) : (
+              <Typography variant="body1">
+                {deviceType === 0 && "Brand Device"}
+                {deviceType === 1 && "Pressure Sensor"}
+                {deviceType === 2 && "Mock Device"}
               </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {option.description}
-              </Typography>
-            </Box>
-            <Box sx={{ flex: 1, textAlign: 'right' }}>
-              {renderConfigurableOption(option, tempConfigValues[option.id], handleOptionChange)}
+            )}
+            <Button
+              variant="text"
+              onClick={() => setEditDeviceType((prev) => !prev)} 
+              sx={{ mt: 1, color: theme.palette.primary.main }}
+            >
+              {editDeviceType ? "Cancel" : "Change Device Type"}
+            </Button>
+          </Box>
+
+          {transitions((style, option) => (
+            <animated.div style={style} key={option.id}>
+              <Box
+                sx={{
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  boxShadow: `0 0 10px ${theme.palette.primary.main}`,
+                  ':hover': {
+                    boxShadow: `0 0 15px ${theme.palette.primary.main}`,
+                  },
+                }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#2a5298' }}>
+                    {option.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {option.description}
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1, textAlign: 'right' }}>
+                  {renderConfigurableOption(option, tempConfigValues[option.id], handleOptionChange)}
+                </Box>
+              </Box>
+            </animated.div>
+          ))}
+
+          {/* Render Command Buttons */}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" sx={{ color: '#2a5298' }}>Device Commands</Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+              {deviceCommands.map((command) => (
+                <Tooltip key={command.id} title={command.description}>
+                  <Button
+                    variant="contained"
+                    onClick={() => handleCommandClick(command)}
+                    sx={{ backgroundColor: '#2a5298', padding: '8px 16px' }}
+                  >
+                    {command.name}
+                  </Button>
+                </Tooltip>
+              ))}
             </Box>
           </Box>
-        </animated.div>
-      ))}
 
-      <Box sx={{ mt: 2 }}>
-        <Button variant="contained" color="primary" onClick={handleSaveConfiguration}>
-          Save Configuration
-        </Button>
+          <Divider sx={{ my: 4 }} /> {/* Adds a horizontal line for separation */}
+
+          {/* Add a Refresh Button */}
+          <Box sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              sx={{ padding: '8px 16px', color: '#2a5298', borderColor: '#2a5298' }}
+              onClick={handleRefresh} // Trigger refresh
+            >
+              Refresh Configuration
+            </Button>
+            <Button
+              variant="contained"
+              sx={{ ml: 5, backgroundColor: '#2a5298', padding: '9px 20px' }}
+              onClick={handleSaveConfiguration}
+            >
+              Save Configuration
+            </Button>
+          </Box>
+        </Box>
       </Box>
-    </Box>
+    </>
   );
 };
 
+// Function to render the configurable option UI based on the option type
 const renderConfigurableOption = (
   option: DeviceOption,
   currentValue: string,

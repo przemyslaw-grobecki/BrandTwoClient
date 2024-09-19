@@ -138,13 +138,21 @@ const ExperimentsPage: React.FC = () => {
   };
 
   const handleLiveView = () => {
-    if (selectedExperiment) {
+    if (selectedExperiment && experiments.find(exp => exp.id == selectedExperiment)?.deviceIds.length) {
+      // Join the device IDs into a comma-separated string for the query parameter
+      const deviceIds = experiments.find(exp => exp.id == selectedExperiment)?.deviceIds ?? [];
+      const deviceIdsQuery = deviceIds.join(',');
+  
+      // Construct the URL with the selected experiment and the device IDs as query parameters
+      const liveViewUrl = `/experiment/${selectedExperiment}/charts?deviceIds=${encodeURIComponent(deviceIdsQuery)}`;
+  
       alert(`Viewing live data for experiment: ${selectedExperiment}`);
-      window.open(`/experiment/${selectedExperiment}/charts`, "_blank");
-      // Add logic for live view
+      window.open(liveViewUrl, "_blank");
+    } else {
+      alert('No device IDs available or no experiment selected');
     }
   };
-
+  
   const handleDownloadResults = async () => {
     if (selectedExperiment) {
       if (experimentsApi != null) {
@@ -190,7 +198,18 @@ const ExperimentsPage: React.FC = () => {
   };
 
   const handleViewCharts = () => {
-    if (selectedExperiment) {
+    if (selectedExperiment && experiments.find(exp => exp.id == selectedExperiment)?.deviceIds.length) {
+      // Join the device IDs into a comma-separated string for the query parameter
+      const deviceIds = experiments.find(exp => exp.id == selectedExperiment)?.deviceIds ?? [];
+      const deviceIdsQuery = deviceIds.join(',');
+  
+      // Construct the URL with the selected experiment and the device IDs as query parameters
+      const storedChartsUrl = `/experiment/${selectedExperiment}/storedCharts?deviceIds=${encodeURIComponent(deviceIdsQuery)}`;
+  
+      alert(`Viewing stored data for experiment: ${selectedExperiment}`);
+      window.open(storedChartsUrl, "_blank");
+    } else {
+      alert('No device IDs available or no experiment selected');
     }
   };
 

@@ -3,6 +3,8 @@ import { IDevicesApi } from "./IDevicesApi";
 import { Device } from "./Device";
 import { BrandClientTokenInfo } from "client/BrandClientConnectionInfo";
 import { DeviceOption } from "./DeviceOption";
+import { DeviceCommand } from "./DeviceCommand";
+import { NewOptionValue } from "./NewOptionValue";
 
 export class DevicesApi implements IDevicesApi {
     devicesAxiosClient: AxiosInstance;
@@ -32,13 +34,27 @@ export class DevicesApi implements IDevicesApi {
         return response.data;
     };
 
-    GetPmtModuleIdentification: (deviceId: string, cardIdentity: number, cardNumber: number) => Promise<string> = async (deviceId: string, cardIdentity: number, cardNumber: number) => {
-        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/pmt/idn');
-        return response.data;
+    GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]> = async (deviceId: string) => {
+        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/Options');
+        return response.data.options;
+    };
+    
+    GetDeviceCommands: (deviceId: string) => Promise<DeviceCommand[]> = async (deviceId: string) => {
+        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/Commands');
+        return response.data.commands;
+    };
+    
+    RunDeviceCommand: (deviceId: string, commandId: string) => Promise<void> = async (deviceId: string, commandId: string) => {
+        var _ = await this.devicesAxiosClient.post(`/${deviceId}/Commands/${commandId}/Run`);
     };
 
-    GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]> = async (deviceId: string) => {
-        var response = await this.devicesAxiosClient.get(`/${deviceId}` + '/options');
-        return response.data;
+    RefreshDeviceOptions: (deviceId: string) => Promise<DeviceOption[]> = async (deviceId: string) => {
+        var response = await this.devicesAxiosClient.post(`/${deviceId}/Options/Refresh`);
+        return response.data.options;
+    };
+    
+    EditDeviceOptions: (deviceId: string, newOptionValues: NewOptionValue[]) => Promise<DeviceOption[]> = async (deviceId: string, newOptionValues: NewOptionValue[]) => {
+        var response = await this.devicesAxiosClient.patch(`/${deviceId}/Options/Edit`, { newOptionValues: newOptionValues });
+        return response.data.options;
     };
 }
