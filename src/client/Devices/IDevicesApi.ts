@@ -11,5 +11,5 @@ export interface IDevicesApi {
     SetDeviceType: (deviceId: string, deviceType: number) => Promise<Device>;
     RunDeviceCommand: (deviceId: string, commandId: string) => Promise<void>;
     RefreshDeviceOptions: (deviceId: string) => Promise<DeviceOption[]>;
-    EditDeviceOptions: (deviceId: string, newOptionValues: NewOptionValue[]) => Promise<DeviceOption[]>;
+    EditDeviceOptions: (deviceId: string, newOptionsValues: { [key: string]: string; }) => Promise<DeviceOption[]>;
 }

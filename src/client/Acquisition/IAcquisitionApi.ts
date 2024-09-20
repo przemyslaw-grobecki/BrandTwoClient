@@ -9,4 +9,5 @@ export interface IAcquisitonApi {
     StartDeviceDataStoring: (experimentId: string, subscriptionTopic: string) => Promise<void>;
     StopDeviceDataStoring: (configurationId: string, subscriptionTopic: string) => Promise<string>;
     GetStoredDataForSession: (sessionId: string) => Promise<StorageItem[]>;
+    DownloadStoredData: (experimentId: string, configurationId: string) => Promise<Blob>;
 }

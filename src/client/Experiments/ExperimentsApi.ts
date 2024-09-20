@@ -48,14 +48,16 @@ export class ExperimentsApi implements IExperimentsApi {
         return response.data;
     };
 
-    StartExperiment: (experimentId: string, duration?: number | undefined) => Promise<void> = async (experimentId: string, duration?: number | undefined) => {
-        await this.experimentsAxiosClient.post(experimentId + '/Start', {
+    StartExperiment: (experimentId: string, duration?: number | undefined) => Promise<Experiment> = async (experimentId: string, duration?: number | undefined) => {
+        var response = await this.experimentsAxiosClient.post(experimentId + '/Start', {
             duration: duration
         });
+        return response.data;
     };
 
-    StopExperiment: (experimentId: string) => Promise<void> = async (experimentId: string) => {
-        await this.experimentsAxiosClient.post(experimentId + '/Stop');
+    StopExperiment: (experimentId: string) => Promise<Experiment> = async (experimentId: string) => {
+        var response = await this.experimentsAxiosClient.post(experimentId + '/Stop');
+        return response.data;
     };
     
 }

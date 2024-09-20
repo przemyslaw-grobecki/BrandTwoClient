@@ -3,7 +3,6 @@ import {
   ButtonBase,
   Card,
   CardContent,
-  CardMedia,
   Grid,
   styled,
   Typography,
@@ -11,7 +10,7 @@ import {
   Box,
   Fab,
   Zoom,
-  Tooltip,
+  IconButton,
 } from "@mui/material";
 import {
   PlayArrow as StartIcon,
@@ -20,31 +19,30 @@ import {
   BarChart as ChartsIcon,
   Download as DownloadIcon,
   Delete as DeleteIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { IExperimentsApi } from "client/Experiments/IExperimentsApi";
 import { Experiment } from "client/Experiments/Experiment";
 import { useTrail, animated } from "@react-spring/web";
-import { useNavigate } from "react-router-dom";
-import StatusIndicator from "components/StatusIndicatorComponent"; // Import the StatusIndicator component
 import { useAlert } from "components/Providers/AlertContext";
+import StatusIndicator from "components/StatusIndicatorComponent"; // Import the StatusIndicator component
 
 const GlowCard = styled(Card)(
   ({ theme, selected }: { theme: any; selected: boolean }) => ({
-    transition: "transform 0.3s, box-shadow 0.3s, top 0.3s, box-shadow 1s",
+    transition: "transform 0.3s, box-shadow 0.3s, top 0.3s",
     transform: selected ? "scale(1.05)" : "scale(1)",
-    boxShadow: selected ? `0 0 30px ${theme.palette.primary.main}` : "none",
+    border: "1px solid #e0e0e0", // Add border
+    boxShadow: selected
+      ? `0px 10px 30px rgba(0, 0, 0, 0.1), 0 0 30px ${theme.palette.primary.main}` // Glow effect + shadow
+      : "0px 5px 15px rgba(0, 0, 0, 0.05)", // Default shadow
     position: "relative",
     top: selected ? "-10px" : "0", // Move selected cards higher
     zIndex: selected ? 2 : 1, // Ensure selected cards are on top
     "&:hover": {
       transform: "scale(1.05)",
-      boxShadow: `0 0 30px ${theme.palette.primary.main}`,
+      boxShadow: `0 10px 30px rgba(0, 0, 0, 0.1), 0 0 30px ${theme.palette.primary.main}`, // Glow effect + stronger shadow on hover
       zIndex: 3, // Ensure hovered card is on top, but below selected cards
-    },
-    "&:active": {
-      transform: "scale(1.05)",
-      boxShadow: `0 0 30px ${theme.palette.primary.main}`,
     },
   })
 );
@@ -78,105 +76,83 @@ const ExperimentsPage: React.FC = () => {
   const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
     null
   );
-  const [maxHeight, setMaxHeight] = useState<number | null>(null);
-  const [maxWidth, setMaxWidth] = useState<number | null>(null);
   const cardRefs = useRef<HTMLDivElement[]>([]);
 
-  useEffect(() => {
-    const fetchExperiments = async () => {
-      try{
-        if (experimentsApi != null) {
-          let experiments = await experimentsApi.GetRelevantExperiments();
-          setExperiments(experiments);
-        }
-      } catch(error) {
-        showAlert('Could not fetch active experiments. Try again later.', 'error');
+  const fetchExperiments = async () => {
+    try {
+      if (experimentsApi != null) {
+        const fetchedExperiments = await experimentsApi.GetRelevantExperiments();
+        setExperiments(fetchedExperiments);
       }
-    };
-    fetchExperiments();
-  }, [experimentsApi]);
+    } catch (error) {
+      showAlert("Could not fetch active experiments. Try again later.", "error");
+    }
+  };
 
   useEffect(() => {
-    if (cardRefs.current.length > 0) {
-      const heights = cardRefs.current.map((ref) => ref.offsetHeight);
-      const widths = cardRefs.current.map((ref) => ref.offsetWidth);
-      setMaxHeight(Math.max(...heights));
-      setMaxWidth(Math.max(...widths));
-    }
-  }, [experiments]);
+    fetchExperiments();
+  }, [experimentsApi]);
 
   const handleCardClick = (id: string) => {
     setSelectedExperiment(id);
   };
 
   const handleStartExperiment = async () => {
-    if (selectedExperiment) {
-      // alert(`Starting experiment: ${selectedExperiment}`);
-      // Add logic to start the experiment
-      if (experimentsApi != null) {
-        try {
-          await experimentsApi.StartExperiment(selectedExperiment);
-          showAlert('Experiment started', 'info');
-        } catch (error) {
-          showAlert('Could not start experiment', 'error');
-        }
+    if (selectedExperiment && experimentsApi) {
+      try {
+        const updatedExperiment = await experimentsApi.StartExperiment(selectedExperiment);
+        updateExperimentData(updatedExperiment); // Update the experiment data
+        showAlert("Experiment started", "info");
+      } catch (error) {
+        showAlert("Could not start experiment", "error");
       }
     }
   };
 
   const handleStopExperiment = async () => {
-    if (selectedExperiment) {
-      if (experimentsApi != null) {
-        try {
-          await experimentsApi.StopExperiment(selectedExperiment);
-          showAlert('Experiment stopped', 'info');
-        } catch (error) {
-          showAlert('Could not stop experiment', 'error');
-        }
+    if (selectedExperiment && experimentsApi) {
+      try {
+        const updatedExperiment = await experimentsApi.StopExperiment(selectedExperiment);
+        updateExperimentData(updatedExperiment); // Update the experiment data
+        showAlert("Experiment stopped", "info");
+      } catch (error) {
+        showAlert("Could not stop experiment", "error");
       }
     }
   };
 
+  const updateExperimentData = (updatedExperiment: Experiment) => {
+    setExperiments((prevExperiments) =>
+      prevExperiments.map((exp) =>
+        exp.id === updatedExperiment.id ? updatedExperiment : exp
+      )
+    );
+  };
+
   const handleLiveView = () => {
-    if (selectedExperiment && experiments.find(exp => exp.id == selectedExperiment)?.deviceIds.length) {
-      // Join the device IDs into a comma-separated string for the query parameter
-      const deviceIds = experiments.find(exp => exp.id == selectedExperiment)?.deviceIds ?? [];
+    if (selectedExperiment && experiments.find(exp => exp.id === selectedExperiment)?.deviceIds.length) {
+      const deviceIds = experiments.find(exp => exp.id === selectedExperiment)?.deviceIds ?? [];
       const deviceIdsQuery = deviceIds.join(',');
-  
-      // Construct the URL with the selected experiment and the device IDs as query parameters
       const liveViewUrl = `/experiment/${selectedExperiment}/charts?deviceIds=${encodeURIComponent(deviceIdsQuery)}`;
-  
-      alert(`Viewing live data for experiment: ${selectedExperiment}`);
       window.open(liveViewUrl, "_blank");
     } else {
-      alert('No device IDs available or no experiment selected');
+      showAlert('No device IDs available or no experiment selected', 'error');
     }
   };
-  
+
   const handleDownloadResults = async () => {
     if (selectedExperiment) {
       if (experimentsApi != null) {
         try {
-          var response: Blob = await experimentsApi.DownloadExperimentData(selectedExperiment);
+          const response: Blob = await experimentsApi.DownloadExperimentData(selectedExperiment);
           const blobUrl = window.URL.createObjectURL(response);
-
-          // Step 4: Create a download link and programmatically click it
           const link = document.createElement('a');
           link.href = blobUrl;
-
-          // Optionally, you can give the file a default name
           link.download = 'downloaded-file.zip';
-
-          // Append the link to the document and click it to open the file save dialog
           document.body.appendChild(link);
           link.click();
-
-          // Clean up: Remove the link after triggering the download
           document.body.removeChild(link);
-
-          // Release the blob URL after use
           window.URL.revokeObjectURL(blobUrl);
-
           showAlert('Experiment data downloaded', 'info');
         } catch (error) {
           showAlert('Could not download experiment data', 'error');
@@ -187,29 +163,24 @@ const ExperimentsPage: React.FC = () => {
 
   const handleDeleteExperiment = async () => {
     if (experimentsApi && selectedExperiment) {
-      try{
+      try {
         await experimentsApi.DeleteExperiment(selectedExperiment);
         setExperiments(experiments.filter(exp => exp.id !== selectedExperiment));
-        showAlert("Sucessfully deleted archived experiment. Data will no longer be accessible.", "success");
-      } catch(error) {
+        showAlert("Successfully deleted archived experiment. Data will no longer be accessible.", "success");
+      } catch (error) {
         showAlert("Could not delete archived experiment. Try again later.", "error");
       }
     }
   };
 
   const handleViewCharts = () => {
-    if (selectedExperiment && experiments.find(exp => exp.id == selectedExperiment)?.deviceIds.length) {
-      // Join the device IDs into a comma-separated string for the query parameter
-      const deviceIds = experiments.find(exp => exp.id == selectedExperiment)?.deviceIds ?? [];
+    if (selectedExperiment && experiments.find(exp => exp.id === selectedExperiment)?.deviceIds.length) {
+      const deviceIds = experiments.find(exp => exp.id === selectedExperiment)?.deviceIds ?? [];
       const deviceIdsQuery = deviceIds.join(',');
-  
-      // Construct the URL with the selected experiment and the device IDs as query parameters
       const storedChartsUrl = `/experiment/${selectedExperiment}/storedCharts?deviceIds=${encodeURIComponent(deviceIdsQuery)}`;
-  
-      alert(`Viewing stored data for experiment: ${selectedExperiment}`);
       window.open(storedChartsUrl, "_blank");
     } else {
-      alert('No device IDs available or no experiment selected');
+      showAlert('No device IDs available or no experiment selected', 'error');
     }
   };
 
@@ -226,21 +197,13 @@ const ExperimentsPage: React.FC = () => {
     }
   };
 
-  // Animation for experiments
-  const trail = useTrail(experiments.length, {
-    from: { opacity: 0, transform: "scale(0.9)" },
-    to: { opacity: 1, transform: "scale(1)" },
-    config: { tension: 200, friction: 20 },
-  });
-
   const getFloatingActionButtons = () => {
     const experiment = experiments.find((exp) => exp.id === selectedExperiment);
-  
     if (!experiment) return null;
-  
+
     const status = getStatus(experiment);
-  
-    if (status === "Ended") {
+
+    if (status === "Ended" && experiment.acquisitionMode === "storage") {
       return (
         <>
           <Zoom in={true}>
@@ -260,7 +223,7 @@ const ExperimentsPage: React.FC = () => {
           <Zoom in={true}>
             <Fab
               color="error"
-              aria-label="delete"
+              aria-label="archive"
               onClick={handleArchiveExperiment}
             >
               <DeleteIcon />
@@ -269,7 +232,7 @@ const ExperimentsPage: React.FC = () => {
         </>
       );
     }
-  
+
     if (status === "Started") {
       return (
         <>
@@ -294,7 +257,7 @@ const ExperimentsPage: React.FC = () => {
         </>
       );
     }
-  
+
     if (status === "Created") {
       return (
         <>
@@ -319,16 +282,27 @@ const ExperimentsPage: React.FC = () => {
         </>
       );
     }
-  
+
     return null;
   };
-  
+
+  // Animation for experiments
+  const trail = useTrail(experiments.length, {
+    from: { opacity: 0, transform: "scale(0.9)" },
+    to: { opacity: 1, transform: "scale(1)" },
+    config: { tension: 200, friction: 20 },
+  });
 
   return (
     <div>
-      <Typography variant="h4" gutterBottom>
-        Experiments
-      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Typography variant="h4" gutterBottom>
+          Experiments
+        </Typography>
+        <IconButton color="primary" onClick={fetchExperiments}>
+          <RefreshIcon />
+        </IconButton>
+      </Box>
       <Grid container spacing={3}>
         {trail.map((animation, index) => (
           <Grid item xs={12} sm={6} md={4} key={experiments[index].id}>
@@ -349,25 +323,33 @@ const ExperimentsPage: React.FC = () => {
                   <GlowCard
                     selected={selectedExperiment === experiments[index].id}
                     theme={theme}
-                    maxHeight={maxHeight ?? "auto"}
-                    maxWidth={maxWidth ?? "auto"}
                   >
-                    <CardMedia
-                      component="img"
-                      alt="Experiment Image"
-                      height="140"
-                      image={`https://picsum.photos/seed/${experiments[index].id}/400/600`} // Random image
-                    />
                     <CardContent>
-                      <Typography variant="h6" component="div">
+                      <Typography variant="h6" component="div" sx={{ textAlign: "center" }}>
                         {experiments[index].id}
                       </Typography>
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <StatusIndicator
-                          status={getStatus(experiments[index])}
-                        />{" "}
-                        {/* Add StatusIndicator */}
-                        <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                        Acquisition Mode: {experiments[index].acquisitionMode}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                        Device Count: {experiments[index].deviceIds.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                        Created At: {new Date(experiments[index].createdAt).toLocaleString()}
+                      </Typography>
+                      {experiments[index].startedAt && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                          Started At: {new Date(experiments[index].startedAt!).toLocaleString()}
+                        </Typography>
+                      )}
+                      {experiments[index].endedAt && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center" }}>
+                          Ended At: {new Date(experiments[index].endedAt!).toLocaleString()}
+                        </Typography>
+                      )}
+                      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", marginTop: 1 }}>
+                        <StatusIndicator status={getStatus(experiments[index])} />
+                        <Typography variant="body2" color="text.secondary" sx={{ marginLeft: 1 }}>
                           Status: {getStatus(experiments[index])}
                         </Typography>
                       </Box>
@@ -380,7 +362,6 @@ const ExperimentsPage: React.FC = () => {
         ))}
       </Grid>
 
-      {/* Floating Action Buttons */}
       <Box
         sx={{
           position: "fixed",
@@ -389,7 +370,7 @@ const ExperimentsPage: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           gap: 2,
-          zIndex: 4, // Ensure FABs are on top of other elements
+          zIndex: 4,
         }}
       >
         {getFloatingActionButtons()}

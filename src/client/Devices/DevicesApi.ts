@@ -13,6 +13,7 @@ export class DevicesApi implements IDevicesApi {
         this.devicesAxiosClient = axios.create({
             baseURL: basePath + '/devices',
             headers: {
+                
                 'Authorization': `Bearer ${brandClientTokenInfo.token}`
             }
         });
@@ -53,8 +54,8 @@ export class DevicesApi implements IDevicesApi {
         return response.data.options;
     };
     
-    EditDeviceOptions: (deviceId: string, newOptionValues: NewOptionValue[]) => Promise<DeviceOption[]> = async (deviceId: string, newOptionValues: NewOptionValue[]) => {
-        var response = await this.devicesAxiosClient.patch(`/${deviceId}/Options/Edit`, { newOptionValues: newOptionValues });
+    EditDeviceOptions: (deviceId: string, newOptionValues: { [key: string]: string; }) => Promise<DeviceOption[]> = async (deviceId: string, newOptionsValues: { [key: string]: string; }) => {
+        var response = await this.devicesAxiosClient.patch(`/${deviceId}/Options/Edit`, { newOptionsValues: newOptionsValues }, { headers: { 'Content-Type': 'application/json' } });
         return response.data.options;
     };
 }

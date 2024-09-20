@@ -17,11 +17,12 @@ import { useParams } from 'react-router-dom';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { DeviceOption } from 'client/Devices/DeviceOption';
-import { DeviceConfigurableOptionType } from 'client/Devices/DeviceOptionType';
+import { DeviceConfigurableOptionType as DeviceOptionType } from 'client/Devices/DeviceOptionType';
 import { useTransition, animated } from '@react-spring/web';
 import LoadingScreen from 'pages/LoadingPage';
 import { useTheme } from '@mui/material/styles';
 import { DeviceCommand } from 'client/Devices/DeviceCommand';
+import { useAlert } from 'components/Providers/AlertContext';
 
 const DeviceConfiguration: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
@@ -29,10 +30,12 @@ const DeviceConfiguration: React.FC = () => {
   const [deviceConfigOptions, setDeviceConfigOptions] = useState<DeviceOption[]>([]);
   const [deviceCommands, setDeviceCommands] = useState<DeviceCommand[]>([]);
   const [tempConfigValues, setTempConfigValues] = useState<{ [key: string]: string }>({});
-  const [deviceType, setDeviceType] = useState<number>(99); 
-  const [editDeviceType, setEditDeviceType] = useState<boolean>(false); 
+  const [changedConfigValues, setChangedConfigValues] = useState<{ [key: string]: string }>({});
+  const [deviceType, setDeviceType] = useState<number>(99);
+  const [editDeviceType, setEditDeviceType] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { showAlert } = useAlert();
   const theme = useTheme();
 
   const devicesApi: IDevicesApi | undefined = useMemo(() => {
@@ -58,7 +61,7 @@ const DeviceConfiguration: React.FC = () => {
     if (devicesApi && deviceId) {
       try {
         const deviceDetails = await devicesApi.GetDevice(deviceId);
-        setDeviceType(deviceDetails.type); 
+        setDeviceType(deviceDetails.type);
         setLoading(false);
       } catch (err) {
         setError('Failed to load device details.');
@@ -82,32 +85,33 @@ const DeviceConfiguration: React.FC = () => {
         }, {} as { [key: string]: string });
         setTempConfigValues(initialValues);
       } catch (err) {
+        showAlert('Failed to load device configuration options.', 'error');
         setError('Failed to load device configuration options.');
       }
     }
   };
 
-  const getUnknownStateForOption = (optionType: DeviceConfigurableOptionType, availableValues: string) => {
+  const getUnknownStateForOption = (optionType: number, availableValues: string) => {
     switch (optionType) {
-      case DeviceConfigurableOptionType.SWITCH:
+      case DeviceOptionType.SWITCH:
         const switchValues = availableValues.split(';');
         return switchValues[0]; // Default to the first option in the switch
 
-      case DeviceConfigurableOptionType.RANGE:
+      case DeviceOptionType.RANGE:
         return '0'; // Default to minimum range value
 
-      case DeviceConfigurableOptionType.TEXT:
+      case DeviceOptionType.TEXT:
         return ''; // Default to empty text
 
-      case DeviceConfigurableOptionType.LIST:
+      case DeviceOptionType.LIST:
         const listValues = availableValues.split(';');
         return listValues[0]; // Default to the first option in the list
 
-      case DeviceConfigurableOptionType.BINARY:
+      case DeviceOptionType.BINARY:
         const bitCount = Number(availableValues);
         return '0'.repeat(bitCount); // Default to all zeroes
 
-      case DeviceConfigurableOptionType.READONLY:
+      case DeviceOptionType.READONLY:
         return 'unknown'; // Default to 'unknown' for readonly options
 
       default:
@@ -115,24 +119,52 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
+  // Update tempConfigValues and track changes in changedConfigValues
   const handleOptionChange = (optionId: string, newValue: string) => {
     setTempConfigValues((prevValues) => ({
       ...prevValues,
       [optionId]: newValue,
     }));
+
+    // Track only the changed values
+    setChangedConfigValues((prevChangedValues) => ({
+      ...prevChangedValues,
+      [optionId]: newValue,
+    }));
   };
 
-  const handleSaveConfiguration = () => {
-    console.log('Saving configuration:', tempConfigValues);
-    alert('Device configuration saved!');
+  const handleSaveConfiguration = async () => {
+    if (devicesApi != null && deviceId != null) {
+      try {
+        // Send only the changed options
+        const updatedOptions: DeviceOption[] = await devicesApi.EditDeviceOptions(deviceId, changedConfigValues);
+
+        // Update the deviceConfigOptions with the new values from the server
+        setDeviceConfigOptions((prevOptions) => {
+          // Merge updated options with existing ones
+          return prevOptions.map((option) => {
+            const updatedOption = updatedOptions.find((updated) => updated.id === option.id);
+            return updatedOption ? { ...option, value: updatedOption.value } : option;
+          });
+        });
+
+        // Clear the changed config values and temp config values after saving successfully
+        setChangedConfigValues({});
+
+        showAlert('Configuration successfully edited!', 'success');
+      } catch (error) {
+        showAlert('Failure during options edit.', 'error');
+      }
+    }
   };
 
   const handleDeviceTypeChange = async (newType: number) => {
     if (deviceId != null) {
       try {
-        await devicesApi?.SetDeviceType(deviceId, newType); 
+        await devicesApi?.SetDeviceType(deviceId, newType);
         setDeviceType(newType);
-        setEditDeviceType(false); 
+        setEditDeviceType(false);
+        showAlert('Device type successfully changed!', 'success');
       } catch (err) {
         setError('Failed to update device type.');
       }
@@ -147,16 +179,28 @@ const DeviceConfiguration: React.FC = () => {
   });
 
   // Handle button clicks for commands
-  const handleCommandClick = (command: DeviceCommand) => {
-    console.log('Executing command:', command);
-    alert(`Command ${command.name} executed!`);
+  const handleCommandClick = async (command: DeviceCommand) => {
+    if (devicesApi != null && deviceId != null) {
+      try {
+        await devicesApi.RunDeviceCommand(deviceId, command.id);
+        showAlert(`Successfully executed command: ${command.name}.`, 'success');
+      } catch (error) {
+        showAlert('Something went wrong during command execution. Try again later.', 'error');
+      }
+    }
   };
 
   // Handle the refresh action
   const handleRefresh = async () => {
-    setLoading(true); // Optional: show loading while fetching new data
-    await fetchDeviceConfigOptions(); // Fetch latest configuration options and commands
-    setLoading(false);
+    if (devicesApi != null && deviceId != null) {
+      try {
+        const options = await devicesApi.RefreshDeviceOptions(deviceId);
+        showAlert('Successfully refreshed device options.', 'success');
+        setDeviceConfigOptions(options);
+      } catch (error) {
+        showAlert('Failure during options refresh.', 'error');
+      }
+    }
   };
 
   if (loading) return <LoadingScreen />;
@@ -164,7 +208,7 @@ const DeviceConfiguration: React.FC = () => {
 
   return (
     <>
-    <CssBaseline/>
+      <CssBaseline />
       <Box
         sx={{
           p: 0,
@@ -182,7 +226,7 @@ const DeviceConfiguration: React.FC = () => {
             borderRadius: '10px',
             padding: '30px',
             margin: '0 auto',
-            color: 'black'
+            color: 'black',
           }}
         >
           <Typography variant="h4" gutterBottom sx={{ color: '#2a5298', fontWeight: 'bold' }}>
@@ -207,17 +251,17 @@ const DeviceConfiguration: React.FC = () => {
               </TextField>
             ) : (
               <Typography variant="body1">
-                {deviceType === 0 && "Brand Device"}
-                {deviceType === 1 && "Pressure Sensor"}
-                {deviceType === 2 && "Mock Device"}
+                {deviceType === 0 && 'Brand Device'}
+                {deviceType === 1 && 'Pressure Sensor'}
+                {deviceType === 2 && 'Mock Device'}
               </Typography>
             )}
             <Button
               variant="text"
-              onClick={() => setEditDeviceType((prev) => !prev)} 
+              onClick={() => setEditDeviceType((prev) => !prev)}
               sx={{ mt: 1, color: theme.palette.primary.main }}
             >
-              {editDeviceType ? "Cancel" : "Change Device Type"}
+              {editDeviceType ? 'Cancel' : 'Change Device Type'}
             </Button>
           </Box>
 
@@ -303,7 +347,7 @@ const renderConfigurableOption = (
   onChange: (id: string, value: string) => void
 ) => {
   switch (option.optionType) {
-    case DeviceConfigurableOptionType.SWITCH:
+    case DeviceOptionType.SWITCH:
       const switchValues = option.availableValues.split(';');
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
@@ -317,7 +361,7 @@ const renderConfigurableOption = (
           <Typography>{switchValues[1]}</Typography>
         </Box>
       );
-    case DeviceConfigurableOptionType.RANGE:
+    case DeviceOptionType.RANGE:
       const [min, max, step] = option.availableValues.split(/[-\[\]]/).map(Number);
       return (
         <Slider
@@ -330,7 +374,7 @@ const renderConfigurableOption = (
           sx={{ width: '100%' }}
         />
       );
-    case DeviceConfigurableOptionType.TEXT:
+    case DeviceOptionType.TEXT:
       return (
         <TextField
           fullWidth
@@ -339,7 +383,7 @@ const renderConfigurableOption = (
           variant="outlined"
         />
       );
-    case DeviceConfigurableOptionType.LIST:
+    case DeviceOptionType.LIST:
       const listValues = option.availableValues.split(';');
       return (
         <TextField
@@ -356,7 +400,7 @@ const renderConfigurableOption = (
           ))}
         </TextField>
       );
-    case DeviceConfigurableOptionType.BINARY:
+    case DeviceOptionType.BINARY:
       const bitCount = Number(option.availableValues);
       const binaryValue = currentValue.padStart(bitCount, '0').split('');
       return (
@@ -376,7 +420,7 @@ const renderConfigurableOption = (
           ))}
         </ToggleButtonGroup>
       );
-    case DeviceConfigurableOptionType.READONLY:
+    case DeviceOptionType.READONLY:
       return (
         <TextField
           fullWidth
