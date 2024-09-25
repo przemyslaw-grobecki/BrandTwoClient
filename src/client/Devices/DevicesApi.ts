@@ -13,15 +13,19 @@ export class DevicesApi implements IDevicesApi {
         this.devicesAxiosClient = axios.create({
             baseURL: basePath + '/devices',
             headers: {
-                
                 'Authorization': `Bearer ${brandClientTokenInfo.token}`
             }
         });
     }
 
+    RenameDevice: (deviceId: string, newDeviceName: string) => Promise<Device> = async (deviceId: string, newDeviceName: string) => {
+        var response = await this.devicesAxiosClient.post(`/${deviceId}` + '/Rename', { newDeviceName: newDeviceName });
+        return response.data
+    };
+
     SetDeviceType: (deviceId: string, deviceType: number) => Promise<Device> = async (deviceId: string, deviceType: number) => {
         var response = await this.devicesAxiosClient.post(`/${deviceId}` + '/SetDeviceType', { DeviceType: deviceType });
-        return response.data
+        return response.data;
     };
 
     GetDevices: () => Promise<Device[]> = async () => {

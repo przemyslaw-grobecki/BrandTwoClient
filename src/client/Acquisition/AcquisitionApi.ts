@@ -16,6 +16,18 @@ export class AcquisitionApi implements IAcquisitonApi {
             }
         });
     }
+
+    DownloadStoredData: (experimentId: string, configurationId: string) => Promise<Blob> = async (experimentId: string, configurationId: string) => {
+        // GetAllStoredExperimentData
+        var response = await this.acquisitionAxiosClient.post(`Storage/GetAllStoredExperimentData`, {
+            experimentId: experimentId,
+            acquisitionConfigurationId: configurationId
+        },
+        {
+            responseType: 'blob'  // Set response type to blob to handle binary data
+        });
+        return response.data;
+    }
     
     StartDeviceDataStoring: (experimentId: string, subscriptionTopic: string) => Promise<void> = async (experimentId: string, subscriptionTopic: string) => {
         var _ = await this.acquisitionAxiosClient.post('StartDeviceDataStoring', {

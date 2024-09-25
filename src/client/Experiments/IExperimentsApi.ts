@@ -8,5 +8,4 @@ export interface IExperimentsApi {
     ArchiveExperiment : (experimentId: string) => Promise<Experiment>;
     StartExperiment : (experimentId: string, duration?: number | undefined) => Promise<Experiment>;
     StopExperiment : (experimentId: string) => Promise<Experiment>;
-    DownloadExperimentData : (experimentId: string) => Promise<Blob>
 }

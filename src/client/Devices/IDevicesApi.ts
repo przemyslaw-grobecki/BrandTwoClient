@@ -6,6 +6,7 @@ import { NewOptionValue } from "./NewOptionValue";
 export interface IDevicesApi {
     GetDevices : () => Promise<Device[]>;
     GetDevice : (deviceId: string) => Promise<Device>;
+    RenameDevice : (deviceId: string, newDeviceName: string) => Promise<Device>;
     GetDeviceOptions: (deviceId: string) => Promise<DeviceOption[]>;
     GetDeviceCommands: (deviceId: string) => Promise<DeviceCommand[]>;
     SetDeviceType: (deviceId: string, deviceType: number) => Promise<Device>;

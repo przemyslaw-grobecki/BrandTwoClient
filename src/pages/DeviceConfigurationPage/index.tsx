@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -11,18 +11,20 @@ import {
   ToggleButtonGroup,
   CssBaseline,
   Tooltip,
-  Divider
-} from '@mui/material';
-import { useParams } from 'react-router-dom';
-import { useBrandClientContext } from 'components/Providers/BrandClientContext';
-import { IDevicesApi } from 'client/Devices/IDevicesApi';
-import { DeviceOption } from 'client/Devices/DeviceOption';
-import { DeviceConfigurableOptionType as DeviceOptionType } from 'client/Devices/DeviceOptionType';
-import { useTransition, animated } from '@react-spring/web';
-import LoadingScreen from 'pages/LoadingPage';
-import { useTheme } from '@mui/material/styles';
-import { DeviceCommand } from 'client/Devices/DeviceCommand';
-import { useAlert } from 'components/Providers/AlertContext';
+  Divider,
+  IconButton,
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import { useParams } from "react-router-dom";
+import { useBrandClientContext } from "components/Providers/BrandClientContext";
+import { IDevicesApi } from "client/Devices/IDevicesApi";
+import { DeviceOption } from "client/Devices/DeviceOption";
+import { DeviceConfigurableOptionType as DeviceOptionType } from "client/Devices/DeviceOptionType";
+import { useTransition, animated } from "@react-spring/web";
+import LoadingScreen from "pages/LoadingPage";
+import { useTheme } from "@mui/material/styles";
+import { DeviceCommand } from "client/Devices/DeviceCommand";
+import { useAlert } from "components/Providers/AlertContext";
 
 const DeviceConfiguration: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
@@ -64,7 +66,7 @@ const DeviceConfiguration: React.FC = () => {
         setDeviceType(deviceDetails.type);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load device details.');
+        setError("Failed to load device details.");
         setLoading(false);
       }
     }
@@ -85,8 +87,8 @@ const DeviceConfiguration: React.FC = () => {
         }, {} as { [key: string]: string });
         setTempConfigValues(initialValues);
       } catch (err) {
-        showAlert('Failed to load device configuration options.', 'error');
-        setError('Failed to load device configuration options.');
+        showAlert("Failed to load device configuration options.", "error");
+        setError("Failed to load device configuration options.");
       }
     }
   };
@@ -94,28 +96,28 @@ const DeviceConfiguration: React.FC = () => {
   const getUnknownStateForOption = (optionType: number, availableValues: string) => {
     switch (optionType) {
       case DeviceOptionType.SWITCH:
-        const switchValues = availableValues.split(';');
+        const switchValues = availableValues.split(";");
         return switchValues[0]; // Default to the first option in the switch
 
       case DeviceOptionType.RANGE:
-        return '0'; // Default to minimum range value
+        return "0"; // Default to minimum range value
 
       case DeviceOptionType.TEXT:
-        return ''; // Default to empty text
+        return ""; // Default to empty text
 
       case DeviceOptionType.LIST:
-        const listValues = availableValues.split(';');
+        const listValues = availableValues.split(";");
         return listValues[0]; // Default to the first option in the list
 
       case DeviceOptionType.BINARY:
         const bitCount = Number(availableValues);
-        return '0'.repeat(bitCount); // Default to all zeroes
+        return "0".repeat(bitCount); // Default to all zeroes
 
       case DeviceOptionType.READONLY:
-        return 'unknown'; // Default to 'unknown' for readonly options
+        return "unknown"; // Default to 'unknown' for readonly options
 
       default:
-        return 'unknown'; // Fallback for unknown option types
+        return "unknown"; // Fallback for unknown option types
     }
   };
 
@@ -151,9 +153,9 @@ const DeviceConfiguration: React.FC = () => {
         // Clear the changed config values and temp config values after saving successfully
         setChangedConfigValues({});
 
-        showAlert('Configuration successfully edited!', 'success');
+        showAlert("Configuration successfully edited!", "success");
       } catch (error) {
-        showAlert('Failure during options edit.', 'error');
+        showAlert("Failure during options edit.", "error");
       }
     }
   };
@@ -164,17 +166,17 @@ const DeviceConfiguration: React.FC = () => {
         await devicesApi?.SetDeviceType(deviceId, newType);
         setDeviceType(newType);
         setEditDeviceType(false);
-        showAlert('Device type successfully changed!', 'success');
+        showAlert("Device type successfully changed!", "success");
       } catch (err) {
-        setError('Failed to update device type.');
+        setError("Failed to update device type.");
       }
     }
   };
 
   const transitions = useTransition(deviceConfigOptions, {
-    from: { opacity: 0, transform: 'translateY(20px)' },
-    enter: { opacity: 1, transform: 'translateY(0px)' },
-    leave: { opacity: 0, transform: 'translateY(20px)' },
+    from: { opacity: 0, transform: "translateY(20px)" },
+    enter: { opacity: 1, transform: "translateY(0px)" },
+    leave: { opacity: 0, transform: "translateY(20px)" },
     keys: deviceConfigOptions.map((option) => option.id),
   });
 
@@ -183,9 +185,9 @@ const DeviceConfiguration: React.FC = () => {
     if (devicesApi != null && deviceId != null) {
       try {
         await devicesApi.RunDeviceCommand(deviceId, command.id);
-        showAlert(`Successfully executed command: ${command.name}.`, 'success');
+        showAlert(`Successfully executed command: ${command.name}.`, "success");
       } catch (error) {
-        showAlert('Something went wrong during command execution. Try again later.', 'error');
+        showAlert("Something went wrong during command execution. Try again later.", "error");
       }
     }
   };
@@ -195,16 +197,34 @@ const DeviceConfiguration: React.FC = () => {
     if (devicesApi != null && deviceId != null) {
       try {
         const options = await devicesApi.RefreshDeviceOptions(deviceId);
-        showAlert('Successfully refreshed device options.', 'success');
+        showAlert("Successfully refreshed device options.", "success");
         setDeviceConfigOptions(options);
       } catch (error) {
-        showAlert('Failure during options refresh.', 'error');
+        showAlert("Failure during options refresh.", "error");
       }
     }
   };
 
+  // Handle individual option refresh button click
+  const handleOptionRefresh = (optionId: string) => {
+    showAlert(`Option ${optionId} refreshed.`, "success");
+  };
+
+  const groupOptionsByGroup = (options: DeviceOption[]) => {
+    return options.reduce((groups: { [key: string]: DeviceOption[] }, option) => {
+      const group = option.group || "Ungrouped"; // Group by 'group' property or 'Ungrouped' if not defined
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(option);
+      return groups;
+    }, {});
+  };
+
   if (loading) return <LoadingScreen />;
   if (error) return <Typography color="error">{error}</Typography>;
+
+  const groupedOptions = groupOptionsByGroup(deviceConfigOptions);
 
   return (
     <>
@@ -212,29 +232,30 @@ const DeviceConfiguration: React.FC = () => {
       <Box
         sx={{
           p: 0,
-          minHeight: '100vh',
-          width: '100vw',
+          minHeight: "100vh",
+          width: "100vw",
           background: `url(/src/assets/images/login_background.jpg) no-repeat center center fixed`,
-          backgroundSize: 'cover',
+          backgroundSize: "cover",
         }}
       >
         <Box
           sx={{
-            width: '100%',
-            maxWidth: '1200px',
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            borderRadius: '10px',
-            padding: '30px',
-            margin: '0 auto',
-            color: 'black',
+            width: "100%",
+            maxWidth: "1200px",
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            borderRadius: "10px",
+            padding: "30px",
+            margin: "0 auto",
+            color: "black",
           }}
         >
-          <Typography variant="h4" gutterBottom sx={{ color: '#2a5298', fontWeight: 'bold' }}>
+          <Typography variant="h4" gutterBottom sx={{ color: "#2a5298", fontWeight: "bold" }}>
             Configure Device: {deviceId}
           </Typography>
-
           <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ color: '#2a5298' }}>Device Type</Typography>
+            <Typography variant="h6" sx={{ color: "#2a5298" }}>
+              Device Type
+            </Typography>
             {editDeviceType ? (
               <TextField
                 select
@@ -243,7 +264,7 @@ const DeviceConfiguration: React.FC = () => {
                 value={deviceType}
                 onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
                 variant="outlined"
-                sx={{ backgroundColor: '#fff', borderRadius: '5px' }}
+                sx={{ backgroundColor: "#fff", borderRadius: "5px" }}
               >
                 <MenuItem value={0}>Brand Device</MenuItem>
                 <MenuItem value={1}>Pressure Sensor</MenuItem>
@@ -251,9 +272,9 @@ const DeviceConfiguration: React.FC = () => {
               </TextField>
             ) : (
               <Typography variant="body1">
-                {deviceType === 0 && 'Brand Device'}
-                {deviceType === 1 && 'Pressure Sensor'}
-                {deviceType === 2 && 'Mock Device'}
+                {deviceType === 0 && "Brand Device"}
+                {deviceType === 1 && "Pressure Sensor"}
+                {deviceType === 2 && "Mock Device"}
               </Typography>
             )}
             <Button
@@ -261,52 +282,92 @@ const DeviceConfiguration: React.FC = () => {
               onClick={() => setEditDeviceType((prev) => !prev)}
               sx={{ mt: 1, color: theme.palette.primary.main }}
             >
-              {editDeviceType ? 'Cancel' : 'Change Device Type'}
+              {editDeviceType ? "Cancel" : "Change Device Type"}
             </Button>
           </Box>
-
-          {transitions((style, option) => (
-            <animated.div style={style} key={option.id}>
-              <Box
-                sx={{
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  borderRadius: '10px',
-                  padding: '10px',
-                  boxShadow: `0 0 10px ${theme.palette.primary.main}`,
-                  ':hover': {
-                    boxShadow: `0 0 15px ${theme.palette.primary.main}`,
-                  },
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#2a5298' }}>
-                    {option.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {option.description}
-                  </Typography>
-                </Box>
-                <Box sx={{ flex: 1, textAlign: 'right' }}>
-                  {renderConfigurableOption(option, tempConfigValues[option.id], handleOptionChange)}
-                </Box>
-              </Box>
-            </animated.div>
+          {Object.entries(groupedOptions).map(([groupName, options]) => (
+            <Box key={groupName} sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}>
+                {groupName}
+              </Typography>
+              {transitions((style, option) => (
+                <animated.div style={{ padding: '10px' }}>
+                  <Box
+                  sx={{
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: '10px',
+                    padding: '10px',
+                    boxShadow: `0 0 10px ${theme.palette.primary.main}`,
+                    ':hover': {
+                      boxShadow: `0 0 15px ${theme.palette.primary.main}`,
+                    },
+                    position: 'relative'
+                  }}
+                >
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="h6"
+                        gutterBottom
+                        sx={{ color: "#2a5298" }}
+                      >
+                        {option.name}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        gutterBottom
+                      >
+                        {option.description}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        flex: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                      }}
+                    >
+                      {renderConfigurableOption(
+                        option,
+                        tempConfigValues[option.id],
+                        handleOptionChange
+                      )}
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOptionRefresh(option.id)}
+                      color="primary"
+                      sx={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    >
+                      <RefreshIcon />
+                    </IconButton>
+                  </Box>
+                </animated.div>
+              ))}
+            </Box>
           ))}
-
           {/* Render Command Buttons */}
           <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" sx={{ color: '#2a5298' }}>Device Commands</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+            <Typography variant="h6" sx={{ color: "#2a5298" }}>
+              Device Commands
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
               {deviceCommands.map((command) => (
                 <Tooltip key={command.id} title={command.description}>
                   <Button
                     variant="contained"
                     onClick={() => handleCommandClick(command)}
-                    sx={{ backgroundColor: '#2a5298', padding: '8px 16px' }}
+                    sx={{ backgroundColor: "#2a5298", padding: "8px 16px" }}
                   >
                     {command.name}
                   </Button>
@@ -314,21 +375,24 @@ const DeviceConfiguration: React.FC = () => {
               ))}
             </Box>
           </Box>
-
-          <Divider sx={{ my: 4 }} /> {/* Adds a horizontal line for separation */}
-
+          <Divider sx={{ my: 4 }} />{" "}
+          {/* Adds a horizontal line for separation */}
           {/* Add a Refresh Button */}
           <Box sx={{ mt: 2 }}>
             <Button
               variant="outlined"
-              sx={{ padding: '8px 16px', color: '#2a5298', borderColor: '#2a5298' }}
+              sx={{
+                padding: "8px 16px",
+                color: "#2a5298",
+                borderColor: "#2a5298",
+              }}
               onClick={handleRefresh} // Trigger refresh
             >
               Refresh Configuration
             </Button>
             <Button
               variant="contained"
-              sx={{ ml: 5, backgroundColor: '#2a5298', padding: '9px 20px' }}
+              sx={{ ml: 5, backgroundColor: "#2a5298", padding: "9px 20px" }}
               onClick={handleSaveConfiguration}
             >
               Save Configuration
@@ -348,9 +412,9 @@ const renderConfigurableOption = (
 ) => {
   switch (option.optionType) {
     case DeviceOptionType.SWITCH:
-      const switchValues = option.availableValues.split(';');
+      const switchValues = option.availableValues.split(";");
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
           <Typography>{switchValues[0]}</Typography>
           <Switch
             checked={currentValue === switchValues[1]}
@@ -361,19 +425,38 @@ const renderConfigurableOption = (
           <Typography>{switchValues[1]}</Typography>
         </Box>
       );
+
     case DeviceOptionType.RANGE:
       const [min, max, step] = option.availableValues.split(/[-\[\]]/).map(Number);
+      const handleRangeChange = (value: string | number, fromInput = false) => {
+        const numValue = Number(value);
+        const clampedValue = Math.min(Math.max(numValue, min), max);
+        onChange(option.id, clampedValue.toString());
+        if (fromInput) {
+          e.target.value = clampedValue.toString(); // Update input field with clamped value
+        }
+      };
       return (
-        <Slider
-          value={Number(currentValue)}
-          min={min}
-          max={max}
-          step={step}
-          onChange={(e, newValue) => onChange(option.id, newValue.toString())}
-          valueLabelDisplay="auto"
-          sx={{ width: '100%' }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", width: "100%", gap: 1 }}>
+          <TextField
+            value={currentValue}
+            type="number"
+            onChange={(e) => handleRangeChange(e.target.value, true)}
+            inputProps={{ min, max, step }}
+            sx={{ width: "100px" }} // Increased width for 4-digit numbers
+          />
+          <Slider
+            value={Number(currentValue)}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(e, newValue) => handleRangeChange(newValue)}
+            valueLabelDisplay="auto"
+            sx={{ flexGrow: 1, marginRight: 6, marginLeft: 6 }} // Leave space before refresh button
+          />
+        </Box>
       );
+
     case DeviceOptionType.TEXT:
       return (
         <TextField
@@ -383,8 +466,9 @@ const renderConfigurableOption = (
           variant="outlined"
         />
       );
+
     case DeviceOptionType.LIST:
-      const listValues = option.availableValues.split(';');
+      const listValues = option.availableValues.split(";");
       return (
         <TextField
           select
@@ -400,26 +484,26 @@ const renderConfigurableOption = (
           ))}
         </TextField>
       );
+
     case DeviceOptionType.BINARY:
       const bitCount = Number(option.availableValues);
-      const binaryValue = currentValue.padStart(bitCount, '0').split('');
+      const binaryValue = currentValue.padStart(bitCount, "0").split("");
+
       return (
-        <ToggleButtonGroup
-          value={binaryValue.join('')}
-          onChange={(e, newValue) => onChange(option.id, newValue)}
-          sx={{ display: 'flex', justifyContent: 'flex-end' }}
-        >
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
           {binaryValue.map((bit, index) => (
             <ToggleButton
               key={index}
-              value={bit === '0' ? '1' : '0'}
+              selected={bit === "1"}
+              value={bit}
               onClick={() => handleBinaryToggle(option.id, binaryValue, index, onChange)}
             >
               {bit}
             </ToggleButton>
           ))}
-        </ToggleButtonGroup>
+        </Box>
       );
+
     case DeviceOptionType.READONLY:
       return (
         <TextField
@@ -431,6 +515,7 @@ const renderConfigurableOption = (
           }}
         />
       );
+
     default:
       return <Typography variant="body2">Unsupported option type.</Typography>;
   }
@@ -442,9 +527,10 @@ const handleBinaryToggle = (
   index: number,
   onChange: (id: string, value: string) => void
 ) => {
-  binaryValue[index] = binaryValue[index] === '0' ? '1' : '0';
-  const newBinaryValue = binaryValue.join('');
-  onChange(optionId, newBinaryValue);
+  const updatedBinaryValue = [...binaryValue]; // Create a copy of the binary array
+  updatedBinaryValue[index] = updatedBinaryValue[index] === "0" ? "1" : "0"; // Toggle the specific bit
+  const newBinaryValue = updatedBinaryValue.join(""); // Join the array back into a string
+  onChange(optionId, newBinaryValue); // Call the onChange handler
 };
 
 export default DeviceConfiguration;

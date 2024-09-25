@@ -1,6 +1,28 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ButtonBase, Card, CardContent, CardMedia, Grid, styled, Typography, useTheme, Box, Fab, Zoom, Tooltip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button, TextField, MenuItem, IconButton } from '@mui/material';
-import { Settings as SettingsIcon, Science as ScienceIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import {
+  ButtonBase,
+  Card,
+  CardContent,
+  CardMedia,
+  Grid,
+  styled,
+  Typography,
+  useTheme,
+  Box,
+  Fab,
+  Zoom,
+  Tooltip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Button,
+  TextField,
+  MenuItem,
+  IconButton
+} from '@mui/material';
+import { Settings as SettingsIcon, Science as ScienceIcon, Refresh as RefreshIcon, Edit as EditIcon, Check as CheckIcon } from '@mui/icons-material';
 import { useBrandClientContext } from 'components/Providers/BrandClientContext';
 import { IDevicesApi } from 'client/Devices/IDevicesApi';
 import { Device } from 'client/Devices/Device';
@@ -51,6 +73,7 @@ const GlowCard = styled(Card)(({ theme, selected, special, maxHeight, maxWidth, 
         ? `0 0 30px ${theme.palette.success.main}` // Green glow for special device
         : `0 0 30px ${theme.palette.primary.main}`,
   },
+  border: "1px solid #e0e0e0", // Add border
   height: maxHeight,
   width: maxWidth,
 }));
@@ -84,24 +107,27 @@ const DevicesPage: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [storeData, setStoreData] = useState(false);
   const [acquisitionConfigurations, setAcquisitionConfigurations] = useState<AcquisitionConfiguration[]>([]);
-  const [selectedConfigurationId, setSelectedConfigurationId] = useState<string | null>(null); // Added for storing selected acquisition configuration
+  const [selectedConfigurationId, setSelectedConfigurationId] = useState<string | null>(null);
+  const [renamingDeviceId, setRenamingDeviceId] = useState<string | null>(null);
+  const [newDeviceName, setNewDeviceName] = useState<string>('');
 
   const cardRefs = useRef<HTMLDivElement[]>([]);
 
   // Hardcoded device
   const hardcodedDevice: Device = {
-    deviceId: 'Brand Acquisition',
-    occupiedComPort: '',
+    deviceId: '------------',
+    name: 'Brand Acquisition',
+    occupiedComPort: 'none',
     type: 7,
   };
 
   const fetchDevices = async () => {
     if (devicesApi != null) {
-      try{
+      try {
         const devices = await devicesApi.GetDevices();
         setDevices([hardcodedDevice, ...devices]);
-      } catch(error) {
-        showAlert("Could not fetch devices from server.", "error");
+      } catch (error) {
+        showAlert('Could not fetch devices from server.', 'error');
       }
     }
   };
@@ -122,11 +148,11 @@ const DevicesPage: React.FC = () => {
   useEffect(() => {
     const fetchConfigurations = async () => {
       if (acquisitionApi) {
-        try{
+        try {
           const configs = await acquisitionApi.GetAcquisitionConfigurations();
           setAcquisitionConfigurations(configs);
         } catch (error) {
-          showAlert("Could not fetch acquisition configurations.", "error");
+          showAlert('Could not fetch acquisition configurations.', 'error');
         }
       }
     };
@@ -159,10 +185,27 @@ const DevicesPage: React.FC = () => {
     }
   };
 
+  const handleRenameDevice = async (deviceId: string) => {
+    if (devicesApi && newDeviceName.trim() !== '') {
+      try {
+        const updatedDevice = await devicesApi.RenameDevice(deviceId, newDeviceName);
+        setDevices((prevDevices) =>
+          prevDevices.map((device) =>
+            device.deviceId === deviceId ? { ...device, name: updatedDevice.name } : device
+          )
+        );
+        showAlert('Device name successfully updated!', 'success');
+        setRenamingDeviceId(null);
+      } catch (error) {
+        showAlert('Failed to rename device.', 'error');
+      }
+    }
+  };
+
   const handleConfigureDevice = () => {
     if (selectedDevices.size === 1) {
       const deviceId = Array.from(selectedDevices)[0];
-      window.open(deviceId === 'Brand Acquisition' ? `/acquisition-configuration/${deviceId}` : `/device-configuration/${deviceId}`, '_blank');
+      window.open(deviceId === '------------' ? `/acquisition-configuration/${deviceId}` : `/device-configuration/${deviceId}`, '_blank');
     }
   };
 
@@ -182,9 +225,9 @@ const DevicesPage: React.FC = () => {
           storeData ? 'storage' : 'freefall',
           selectedConfigurationId // Pass selected acquisition configuration ID
         );
-        showAlert(`Created new experiment with id: ${response.id}`, "success");
-      } catch(error){
-        showAlert("Could not create new experiment.", "error");
+        showAlert(`Created new experiment with id: ${response.id}`, 'success');
+      } catch (error) {
+        showAlert('Could not create new experiment.', 'error');
       }
     }
   };
@@ -246,14 +289,32 @@ const DevicesPage: React.FC = () => {
                       maxWidth={maxWidth ?? 'auto'}
                       error={accessDenied === devices[index].deviceId}
                     >
-                      <CardMedia
-                        component="img"
-                        alt="Device Image"
-                        height="140"
-                        image={getImageForDeviceType(devices[index].type)} // Use the function to get image
-                      />
                       <CardContent>
-                        <Typography variant="h6" component="div">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {renamingDeviceId === devices[index].deviceId ? (
+                            <TextField
+                              variant="outlined"
+                              value={newDeviceName}
+                              onChange={(e) => setNewDeviceName(e.target.value)}
+                              size="small"
+                              sx={{ marginRight: 1 }}
+                            />
+                          ) : (
+                            <Typography variant="h6" component="div">
+                              {devices[index].name}
+                            </Typography>
+                          )}
+                          {renamingDeviceId === devices[index].deviceId ? (
+                            <IconButton onClick={(e) => { e.stopPropagation(); handleRenameDevice(devices[index].deviceId); }} size="small">
+                              <CheckIcon />
+                            </IconButton>
+                          ) : (
+                            <IconButton onClick={(e) => { e.stopPropagation(); setRenamingDeviceId(devices[index].deviceId); setNewDeviceName(devices[index].name); }} size="small">
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
                           {devices[index].deviceId}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
@@ -263,6 +324,12 @@ const DevicesPage: React.FC = () => {
                           Device Type: {deviceTypeToString(devices[index].type)}
                         </Typography>
                       </CardContent>
+                      <CardMedia
+                        component="img"
+                        alt="Device Image"
+                        height="140"
+                        image={getImageForDeviceType(devices[index].type)} // Use the function to get image
+                      />
                     </GlowCard>
                   </Box>
                 </Tooltip>
@@ -284,7 +351,6 @@ const DevicesPage: React.FC = () => {
           zIndex: 4,
         }}
       >
-
         {/* Configure Device Button (visible only if 1 device selected) */}
         <Zoom in={selectedDevices.size === 1}>
           <Fab color="secondary" aria-label="configure" onClick={handleConfigureDevice}>
@@ -319,7 +385,7 @@ const DevicesPage: React.FC = () => {
             select
             fullWidth
             label="Acquisition Configuration"
-            value={selectedConfigurationId || ""}
+            value={selectedConfigurationId || ''}
             onChange={handleConfigurationChange}
             variant="outlined"
             margin="normal"
@@ -334,14 +400,14 @@ const DevicesPage: React.FC = () => {
             Do you want to store the data from the selected devices during the experiment?
           </DialogContentText>
           <Button
-            variant={storeData ? "contained" : "outlined"}
+            variant={storeData ? 'contained' : 'outlined'}
             onClick={() => setStoreData(true)}
             sx={{ mt: 2, mr: 2 }}
           >
             Store Data
           </Button>
           <Button
-            variant={!storeData ? "contained" : "outlined"}
+            variant={!storeData ? 'contained' : 'outlined'}
             onClick={() => setStoreData(false)}
             sx={{ mt: 2 }}
           >

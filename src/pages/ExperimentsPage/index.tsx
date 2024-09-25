@@ -27,6 +27,7 @@ import { Experiment } from "client/Experiments/Experiment";
 import { useTrail, animated } from "@react-spring/web";
 import { useAlert } from "components/Providers/AlertContext";
 import StatusIndicator from "components/StatusIndicatorComponent"; // Import the StatusIndicator component
+import { IAcquisitonApi } from "client/Acquisition/IAcquisitionApi";
 
 const GlowCard = styled(Card)(
   ({ theme, selected }: { theme: any; selected: boolean }) => ({
@@ -70,6 +71,14 @@ const ExperimentsPage: React.FC = () => {
       experimentsApi = client.getExperimentsApi(brandClientTokenInfo);
     }
     return experimentsApi;
+  }, [client, brandClientTokenInfo]);
+
+  const acquisitionApi: IAcquisitonApi | undefined = useMemo(() => {
+    let acquisitionApi: IAcquisitonApi | undefined;
+    if(brandClientTokenInfo != null) {
+        acquisitionApi = client.getAcquisitionApi(brandClientTokenInfo);
+    }
+    return acquisitionApi;
   }, [client, brandClientTokenInfo]);
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
@@ -142,24 +151,33 @@ const ExperimentsPage: React.FC = () => {
 
   const handleDownloadResults = async () => {
     if (selectedExperiment) {
-      if (experimentsApi != null) {
+      if (acquisitionApi != null) {
+        const acquisitionConfigurationId: string = experiments.find(ex => ex.id == selectedExperiment)!.acquisitionConfigurationId!;
         try {
-          const response: Blob = await experimentsApi.DownloadExperimentData(selectedExperiment);
+          // Make the API request and ensure it is expected as a binary response
+          const response = await acquisitionApi.DownloadStoredData(selectedExperiment, acquisitionConfigurationId);
+
+          // Create the Blob URL
           const blobUrl = window.URL.createObjectURL(response);
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = 'downloaded-file.zip';
+          link.download = `${selectedExperiment}.zip`;
           document.body.appendChild(link);
           link.click();
+  
+          // Clean up the link and blob URL
           document.body.removeChild(link);
           window.URL.revokeObjectURL(blobUrl);
+  
           showAlert('Experiment data downloaded', 'info');
         } catch (error) {
+          console.error('Download error:', error);
           showAlert('Could not download experiment data', 'error');
         }
       }
     }
   };
+  
 
   const handleDeleteExperiment = async () => {
     if (experimentsApi && selectedExperiment) {

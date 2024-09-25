@@ -14,11 +14,7 @@ export class ExperimentsApi implements IExperimentsApi {
             }
         });
     }
-    DownloadExperimentData: (experimentId: string) => Promise<Blob> = async (experimentId: string) => {
-        const response = await this.experimentsAxiosClient.get(`${experimentId}/DownloadExperimentData`)
-        return response.data.blob();
-    };
-
+    
     GetRelevantExperiments: () => Promise<Experiment[]> = async () => {
         const response = await this.experimentsAxiosClient.get('');
         return response.data;

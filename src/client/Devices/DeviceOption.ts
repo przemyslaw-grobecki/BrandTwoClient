@@ -4,5 +4,6 @@ export type DeviceOption = {
    value: string;
    optionType: number;
    description: string;
+   group: string;
    availableValues: string;
 };
