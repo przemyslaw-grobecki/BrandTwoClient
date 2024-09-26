@@ -19,6 +19,8 @@ import WarningIcon from "@mui/icons-material/Warning";
 import ErrorIcon from "@mui/icons-material/Error";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import CancelIcon from "@mui/icons-material/Cancel";
+import EditIcon from "@mui/icons-material/Edit";
 import { useParams } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { IDevicesApi } from "client/Devices/IDevicesApi";
@@ -32,10 +34,16 @@ import { useAlert } from "components/Providers/AlertContext";
 const DeviceConfiguration: React.FC = () => {
   const { client, brandClientTokenInfo } = useBrandClientContext();
   const { deviceId } = useParams<{ deviceId: string }>();
-  const [deviceConfigOptions, setDeviceConfigOptions] = useState<DeviceOption[]>([]);
+  const [deviceConfigOptions, setDeviceConfigOptions] = useState<
+    DeviceOption[]
+  >([]);
   const [deviceCommands, setDeviceCommands] = useState<DeviceCommand[]>([]);
-  const [tempConfigValues, setTempConfigValues] = useState<{ [key: string]: string }>({});
-  const [changedConfigValues, setChangedConfigValues] = useState<{ [key: string]: string }>({});
+  const [tempConfigValues, setTempConfigValues] = useState<{
+    [key: string]: string;
+  }>({});
+  const [changedConfigValues, setChangedConfigValues] = useState<{
+    [key: string]: string;
+  }>({});
   const [deviceType, setDeviceType] = useState<number>(99);
   const [editDeviceType, setEditDeviceType] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -80,13 +88,20 @@ const DeviceConfiguration: React.FC = () => {
   const fetchDeviceConfigOptions = async () => {
     if (devicesApi && deviceId && deviceType !== 99) {
       try {
-        const options: DeviceOption[] = await devicesApi.GetDeviceOptions(deviceId);
-        const commands: DeviceCommand[] = await devicesApi.GetDeviceCommands(deviceId);
+        const options: DeviceOption[] = await devicesApi.GetDeviceOptions(
+          deviceId
+        );
+        const commands: DeviceCommand[] = await devicesApi.GetDeviceCommands(
+          deviceId
+        );
         setDeviceConfigOptions(options);
         setDeviceCommands(commands);
 
         const initialValues = options.reduce((acc, option) => {
-          acc[option.id] = getUnknownStateForOption(option.optionType, option.availableValues);
+          acc[option.id] = getUnknownStateForOption(
+            option.optionType,
+            option.availableValues
+          );
           return acc;
         }, {} as { [key: string]: string });
         setTempConfigValues(initialValues);
@@ -97,73 +112,90 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  const getUnknownStateForOption = (optionType: number, availableValues: string) => {
-    switch (optionType) {
-      case DeviceOptionType.SWITCH:
-        const switchValues = availableValues.split(";");
-        return switchValues[0]; // Default to the first option in the switch
+  const getUnknownStateForOption = useCallback(
+    (optionType: number, availableValues: string) => {
+      switch (optionType) {
+        case DeviceOptionType.SWITCH:
+          const switchValues = availableValues.split(";");
+          return switchValues[0]; // Default to the first option in the switch
 
-      case DeviceOptionType.RANGE:
-        return "0"; // Default to minimum range value
+        case DeviceOptionType.RANGE:
+          return "0"; // Default to minimum range value
 
-      case DeviceOptionType.TEXT:
-        return ""; // Default to empty text
+        case DeviceOptionType.TEXT:
+          return ""; // Default to empty text
 
-      case DeviceOptionType.LIST:
-        const listValues = availableValues.split(";");
-        return listValues[0]; // Default to the first option in the list
+        case DeviceOptionType.LIST:
+          const listValues = availableValues.split(";");
+          return listValues[0]; // Default to the first option in the list
 
-      case DeviceOptionType.BINARY:
-        const bitCount = Number(availableValues);
-        return "0".repeat(bitCount); // Default to all zeroes
+        case DeviceOptionType.BINARY:
+          const bitCount = Number(availableValues);
+          return "0".repeat(bitCount); // Default to all zeroes
 
-      case DeviceOptionType.READONLY:
-        return "unknown"; // Default to 'unknown' for readonly options
+        case DeviceOptionType.READONLY:
+          return "unknown"; // Default to 'unknown' for readonly options
 
-      default:
-        return "unknown"; // Fallback for unknown option types
-    }
-  };
+        default:
+          return "unknown"; // Fallback for unknown option types
+      }
+    },
+    []
+  );
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue); // Update active group tab
   };
 
-  const handleSliderChange = useCallback((optionId: string, newValue: string) => {
-    setTempConfigValues((prevValues) => ({
-      ...prevValues,
-      [optionId]: newValue,
-    }));
-  }, []);
+  const handleSliderChange = useCallback(
+    (optionId: string, newValue: string) => {
+      setTempConfigValues((prevValues) => ({
+        ...prevValues,
+        [optionId]: newValue,
+      }));
+    },
+    []
+  );
 
-  const handleSliderCommit = useCallback((optionId: string, newValue: string) => {
-    setChangedConfigValues((prevChangedValues) => ({
-      ...prevChangedValues,
-      [optionId]: newValue,
-    }));
-  }, []);
+  const handleSliderCommit = useCallback(
+    (optionId: string, newValue: string) => {
+      setChangedConfigValues((prevChangedValues) => ({
+        ...prevChangedValues,
+        [optionId]: newValue,
+      }));
+    },
+    []
+  );
 
-  const handleOptionChange = useCallback((optionId: string, newValue: string) => {
-    setTempConfigValues((prevValues) => ({
-      ...prevValues,
-      [optionId]: newValue,
-    }));
+  const handleOptionChange = useCallback(
+    (optionId: string, newValue: string) => {
+      setTempConfigValues((prevValues) => ({
+        ...prevValues,
+        [optionId]: newValue,
+      }));
 
-    setChangedConfigValues((prevChangedValues) => ({
-      ...prevChangedValues,
-      [optionId]: newValue,
-    }));
-  }, []);
+      setChangedConfigValues((prevChangedValues) => ({
+        ...prevChangedValues,
+        [optionId]: newValue,
+      }));
+    },
+    []
+  );
 
   const handleSaveConfiguration = async () => {
     if (devicesApi != null && deviceId != null) {
       try {
-        const updatedOptions: DeviceOption[] = await devicesApi.EditDeviceOptions(deviceId, changedConfigValues);
+        const updatedOptions: DeviceOption[] =
+          await devicesApi.EditDeviceOptions(deviceId, changedConfigValues);
 
         setDeviceConfigOptions((prevOptions) => {
           return prevOptions.map((option) => {
-            const updatedOption = updatedOptions.find((updated) => updated.id === option.id);
-            return updatedOption ? { ...option, value: updatedOption.value } : option;
+            const updatedOption = updatedOptions.find(
+              (updated) => updated.id === option.id
+            );
+            return updatedOption
+              ? { ...option, value: updatedOption.value }
+              : option;
           });
         });
 
@@ -195,7 +227,10 @@ const DeviceConfiguration: React.FC = () => {
         await devicesApi.RunDeviceCommand(deviceId, command.id);
         showAlert(`Successfully executed command: ${command.name}.`, "success");
       } catch (error) {
-        showAlert("Something went wrong during command execution. Try again later.", "error");
+        showAlert(
+          "Something went wrong during command execution. Try again later.",
+          "error"
+        );
       }
     }
   };
@@ -217,14 +252,17 @@ const DeviceConfiguration: React.FC = () => {
   };
 
   const groupOptionsByGroup = (options: DeviceOption[]) => {
-    return options.reduce((groups: { [key: string]: DeviceOption[] }, option) => {
-      const group = option.group || "Ungrouped"; // Group by 'group' property or 'Ungrouped' if not defined
-      if (!groups[group]) {
-        groups[group] = [];
-      }
-      groups[group].push(option);
-      return groups;
-    }, {});
+    return options.reduce(
+      (groups: { [key: string]: DeviceOption[] }, option) => {
+        const group = option.group || "Ungrouped"; // Group by 'group' property or 'Ungrouped' if not defined
+        if (!groups[group]) {
+          groups[group] = [];
+        }
+        groups[group].push(option);
+        return groups;
+      },
+      {}
+    );
   };
 
   if (loading) return <LoadingScreen />;
@@ -243,6 +281,10 @@ const DeviceConfiguration: React.FC = () => {
           width: "100vw",
           background: `url(/src/assets/images/login_background.jpg) no-repeat center center fixed`,
           backgroundSize: "cover",
+
+          display: "flex", // Enable flexbox
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
         }}
       >
         <Box
@@ -264,131 +306,255 @@ const DeviceConfiguration: React.FC = () => {
             Configure Device: {deviceId}
           </Typography>
 
-          {/* Tabs to switch between groups */}
-          <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-            {groupNames.map((groupName, index) => (
-              <Tab key={groupName} label={groupName} />
-            ))}
-          </Tabs>
-
-          {/* Only render the options of the active group */}
-          {groupNames.map((groupName, index) =>
-            index === activeTab ? (
-              <Box key={groupName} sx={{ mb: 4 }}>
-                <Typography
-                  variant="h5"
-                  sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}
-                >
-                  {groupName}
-                </Typography>
-
-                {groupedOptions[groupName].map((option) => (
-                  <Box
-                    key={option.id}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      mb: 2,
-                      position: "relative",
-                    }}
-                  >
-                    {/* Left Section: Name and Description (Vertical Layout) */}
-                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                      <Typography
-                        variant="h6"
-                        gutterBottom
-                        sx={{ color: "#2a5298" }}
-                      >
-                        {option.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        {option.description}
-                      </Typography>
-                    </Box>
-
-                    {/* Right Section: Memoized Option, Button, and Conditional Icon */}
-                    <Box sx={{ flex: 2, display: "flex", alignItems: "center", marginLeft: "auto", gap: 2 }}>
-                      <MemoizedOption
-                        key={option.id}
-                        option={option}
-                        currentValue={tempConfigValues[option.id]}
-                        handleChange={handleOptionChange}
-                        handleSliderChange={handleSliderChange}
-                        handleSliderCommit={handleSliderCommit}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOptionRefresh(option.id)}
-                        color="primary"
-                        sx={{ marginLeft: "auto" }}
-                      >
-                        <RefreshIcon />
-                      </IconButton>
-
-                      {/* Conditional Rendering of Icons based on the option's value */}
-                      {option.value.toLowerCase() === "unknown" && (
-                        <Tooltip title="Option is undefined">
-                          <WarningIcon sx={{ color: "orange" }} />
-                        </Tooltip>
-                      )}
-                      {option.value.toLowerCase() === "error" && (
-                        <Tooltip title="Option is in fault state">
-                          <ErrorIcon sx={{ color: "red" }} />
-                        </Tooltip>
-                      )}
-                      {option.value &&
-                        option.value.toLowerCase() !== "unknown" &&
-                        option.value.toLowerCase() !== "error" && (
-                        <Tooltip title="Option is correctly synced">
-                          <CheckCircleIcon sx={{ color: "green" }} />
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            ) : null
-          )}
-
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" sx={{ color: "#2a5298" }}>
-              Device Commands
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
-              {deviceCommands.map((command) => (
-                <Tooltip key={command.id} title={command.description}>
-                  <Button
-                    variant="contained"
-                    onClick={() => handleCommandClick(command)}
-                    sx={{ backgroundColor: "#2a5298", padding: "8px 16px" }}
-                  >
-                    {command.name}
-                  </Button>
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
-          <Divider sx={{ my: 4 }} />
-          <Box sx={{ mt: 2 }}>
-            <Button
-              variant="outlined"
-              sx={{
-                padding: "8px 16px",
-                color: "#2a5298",
-                borderColor: "#2a5298",
-              }}
-              onClick={handleRefresh}
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: "10px",
+              boxShadow: "0 2px 12px rgba(0, 0, 0, 0.1)",
+              backgroundColor: "#fff5",
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}
             >
-              Refresh Configuration
-            </Button>
+              Device Type
+            </Typography>
+
+            {editDeviceType ? (
+              <TextField
+                select
+                fullWidth
+                label="Select Device Type"
+                value={deviceType}
+                onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
+                variant="outlined"
+                sx={{
+                  backgroundColor: "#f9f9f9",
+                  borderRadius: "10px",
+                  transition: "0.3s",
+                  "& .MuiOutlinedInput-root": {
+                    "& fieldset": {
+                      borderColor: "#2a5298",
+                    },
+                    "&:hover fieldset": {
+                      borderColor: "#3b6fb6",
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: "#1a4880",
+                    },
+                  },
+                }}
+              >
+                <MenuItem value={0}>Brand Device</MenuItem>
+                <MenuItem value={1}>Pressure Sensor</MenuItem>
+                <MenuItem value={2}>Mock Device</MenuItem>
+              </TextField>
+            ) : (
+              <Typography
+                variant="body1"
+                sx={{
+                  backgroundColor: "#f2f2f2",
+                  padding: "10px 15px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  fontWeight: "500",
+                  color: "#333",
+                }}
+              >
+                {deviceType === 0 && "Brand Device"}
+                {deviceType === 1 && "Pressure Sensor"}
+                {deviceType === 2 && "Mock Device"}
+              </Typography>
+            )}
+
             <Button
               variant="contained"
-              sx={{ ml: 5, backgroundColor: "#2a5298", padding: "9px 20px" }}
-              onClick={handleSaveConfiguration}
+              onClick={() => setEditDeviceType((prev) => !prev)}
+              sx={{
+                mt: 2,
+                padding: "8px 16px",
+                backgroundColor: editDeviceType ? "#e57373" : "#2a5298",
+                color: "#fff",
+                "&:hover": {
+                  backgroundColor: editDeviceType ? "#ef5350" : "#1e3f76",
+                },
+                borderRadius: "8px",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                transition: "0.3s",
+              }}
             >
-              Save Configuration
+              {editDeviceType ? (
+                <>
+                  <CancelIcon />
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <EditIcon />
+                  Change Device Type
+                </>
+              )}
             </Button>
+          </Box>
+
+          <Box
+            sx={{
+              mb: 3,
+              p: 2,
+              borderRadius: "10px",
+              boxShadow: "0 2px 12px rgba(0, 0, 0, 0.1)",
+              backgroundColor: "#fff5",
+            }}
+          >
+            {/* Tabs to switch between groups */}
+            <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+              {groupNames.map((groupName, index) => (
+                <Tab key={groupName} label={groupName} />
+              ))}
+            </Tabs>
+
+            {/* Only render the options of the active group */}
+            {groupNames.map((groupName, index) =>
+              index === activeTab ? (
+                <Box key={groupName} sx={{ mb: 4 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}
+                  >
+                    {groupName}
+                  </Typography>
+
+                  {groupedOptions[groupName].map((option) => (
+                    <Box
+                      key={option.id}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 2,
+                        position: "relative",
+                      }}
+                    >
+                      {/* Left Section: Name and Description (Vertical Layout) */}
+                      <Box
+                        sx={{
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          sx={{ color: "#2a5298" }}
+                        >
+                          {option.name}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          gutterBottom
+                        >
+                          {option.description}
+                        </Typography>
+                      </Box>
+
+                      {/* Right Section: Memoized Option, Button, and Conditional Icon */}
+                      <Box
+                        sx={{
+                          flex: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          marginLeft: "auto",
+                          gap: 2,
+                        }}
+                      >
+                        <MemoizedOption
+                          key={option.id}
+                          option={option}
+                          currentValue={tempConfigValues[option.id]}
+                          handleChange={handleOptionChange}
+                          handleSliderChange={handleSliderChange}
+                          handleSliderCommit={handleSliderCommit}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOptionRefresh(option.id)}
+                          color="primary"
+                          sx={{ marginLeft: "auto" }}
+                        >
+                          <RefreshIcon />
+                        </IconButton>
+
+                        {/* Conditional Rendering of Icons based on the option's value */}
+                        {option.value.toLowerCase() === "unknown" && (
+                          <Tooltip title="Option is undefined">
+                            <WarningIcon sx={{ color: "orange" }} />
+                          </Tooltip>
+                        )}
+                        {option.value.toLowerCase() === "error" && (
+                          <Tooltip title="Option is in fault state">
+                            <ErrorIcon sx={{ color: "red" }} />
+                          </Tooltip>
+                        )}
+                        {option.value &&
+                          option.value.toLowerCase() !== "unknown" &&
+                          option.value.toLowerCase() !== "error" && (
+                            <Tooltip title="Option is correctly synced">
+                              <CheckCircleIcon sx={{ color: "green" }} />
+                            </Tooltip>
+                          )}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              ) : null
+            )}
+
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" sx={{ color: "#2a5298" }}>
+                Device Commands
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mt: 2 }}>
+                {deviceCommands.map((command) => (
+                  <Tooltip key={command.id} title={command.description}>
+                    <Button
+                      variant="contained"
+                      onClick={() => handleCommandClick(command)}
+                      sx={{ backgroundColor: "#2a5298", padding: "8px 16px" }}
+                    >
+                      {command.name}
+                    </Button>
+                  </Tooltip>
+                ))}
+              </Box>
+            </Box>
+            <Divider sx={{ my: 4 }} />
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="outlined"
+                sx={{
+                  padding: "8px 16px",
+                  color: "#2a5298",
+                  borderColor: "#2a5298",
+                }}
+                onClick={handleRefresh}
+              >
+                Refresh Configuration
+              </Button>
+              <Button
+                variant="contained"
+                sx={{ ml: 5, backgroundColor: "#2a5298", padding: "9px 20px" }}
+                onClick={handleSaveConfiguration}
+              >
+                Save Configuration
+              </Button>
+            </Box>
           </Box>
         </Box>
       </Box>
@@ -487,7 +653,9 @@ const renderConfigurableOption = (
             onChangeCommitted={(e, newValue) =>
               handleSliderCommit(option.id, newValue.toString())
             } // Persist on slider commit
-            sx={isErrorOrUndefined ? { borderColor: "red", borderWidth: 2 } : {}}
+            sx={
+              isErrorOrUndefined ? { borderColor: "red", borderWidth: 2 } : {}
+            }
             valueLabelDisplay="auto"
           />
         </Box>

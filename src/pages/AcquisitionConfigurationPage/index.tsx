@@ -98,6 +98,9 @@ const AcquisitionConfigurationPage: React.FC = () => {
         width: '100vw', // Full-width for the background
         background: `url(/src/assets/images/login_background.jpg) no-repeat center center fixed`,
         backgroundSize: 'cover',
+        display: "flex", // Enable flexbox
+        justifyContent: "center", // Center horizontally
+        alignItems: "center", // Center vertically
       }}
     >
       <Box

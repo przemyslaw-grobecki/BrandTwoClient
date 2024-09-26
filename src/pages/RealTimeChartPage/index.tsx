@@ -195,6 +195,9 @@ const RealTimeChartPage: React.FC<{ experimentId: string }> = ({
           width: "100vw",
           background: `url(/src/assets/images/login_background.jpg) no-repeat center center fixed`,
           backgroundSize: "cover",
+          display: "flex", // Enable flexbox
+          justifyContent: "center", // Center horizontally
+          alignItems: "center", // Center vertically
         }}
       >
         <Box
