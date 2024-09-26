@@ -21,6 +21,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import CancelIcon from "@mui/icons-material/Cancel";
 import EditIcon from "@mui/icons-material/Edit";
+import SyncProblemIcon from "@mui/icons-material/SyncProblem";
+import CircularProgress from "@mui/material/CircularProgress";
 import { useParams } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { IDevicesApi } from "client/Devices/IDevicesApi";
@@ -45,6 +47,7 @@ const DeviceConfiguration: React.FC = () => {
     [key: string]: string;
   }>({});
   const [deviceType, setDeviceType] = useState<number>(99);
+  const [loadingOptions, setLoadingOptions] = useState<string[]>([]); // Track loading states for specific options
   const [editDeviceType, setEditDeviceType] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,10 +101,14 @@ const DeviceConfiguration: React.FC = () => {
         setDeviceCommands(commands);
 
         const initialValues = options.reduce((acc, option) => {
-          acc[option.id] = getUnknownStateForOption(
-            option.optionType,
-            option.availableValues
-          );
+          acc[option.id] =
+            option.value.toLowerCase() == "unknown" ||
+            option.value.toLowerCase() == "error"
+              ? getUnknownStateForOption(
+                  option.optionType,
+                  option.availableValues
+                )
+              : option.value;
           return acc;
         }, {} as { [key: string]: string });
         setTempConfigValues(initialValues);
@@ -185,6 +192,8 @@ const DeviceConfiguration: React.FC = () => {
   const handleSaveConfiguration = async () => {
     if (devicesApi != null && deviceId != null) {
       try {
+        setLoadingOptions(Object.keys(changedConfigValues)); // Start loading spinner for the changed options
+
         const updatedOptions: DeviceOption[] =
           await devicesApi.EditDeviceOptions(deviceId, changedConfigValues);
 
@@ -200,9 +209,11 @@ const DeviceConfiguration: React.FC = () => {
         });
 
         setChangedConfigValues({});
+        setLoadingOptions([]); // Reset loading state
 
         showAlert("Configuration successfully edited!", "success");
       } catch (error) {
+        setLoadingOptions([]); // Reset loading state on failure
         showAlert("Failure during options edit.", "error");
       }
     }
@@ -491,24 +502,25 @@ const DeviceConfiguration: React.FC = () => {
                           <RefreshIcon />
                         </IconButton>
 
-                        {/* Conditional Rendering of Icons based on the option's value */}
-                        {option.value.toLowerCase() === "unknown" && (
+                        {loadingOptions.includes(option.id) ? (
+                          <CircularProgress size={20} sx={{ color: "blue" }} />
+                        ) : changedConfigValues[option.id] ? (
+                          <Tooltip title="Option has unsaved changes">
+                            <SyncProblemIcon sx={{ color: "orange" }} />
+                          </Tooltip>
+                        ) : option.value.toLowerCase() === "unknown" ? (
                           <Tooltip title="Option is undefined">
                             <WarningIcon sx={{ color: "orange" }} />
                           </Tooltip>
-                        )}
-                        {option.value.toLowerCase() === "error" && (
+                        ) : option.value.toLowerCase() === "error" ? (
                           <Tooltip title="Option is in fault state">
                             <ErrorIcon sx={{ color: "red" }} />
                           </Tooltip>
+                        ) : (
+                          <Tooltip title="Option is correctly synced">
+                            <CheckCircleIcon sx={{ color: "green" }} />
+                          </Tooltip>
                         )}
-                        {option.value &&
-                          option.value.toLowerCase() !== "unknown" &&
-                          option.value.toLowerCase() !== "error" && (
-                            <Tooltip title="Option is correctly synced">
-                              <CheckCircleIcon sx={{ color: "green" }} />
-                            </Tooltip>
-                          )}
                       </Box>
                     </Box>
                   ))}

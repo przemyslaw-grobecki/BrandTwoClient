@@ -60,6 +60,6 @@ export class DevicesApi implements IDevicesApi {
     
     EditDeviceOptions: (deviceId: string, newOptionValues: { [key: string]: string; }) => Promise<DeviceOption[]> = async (deviceId: string, newOptionsValues: { [key: string]: string; }) => {
         var response = await this.devicesAxiosClient.patch(`/${deviceId}/Options/Edit`, { newOptionsValues: newOptionsValues }, { headers: { 'Content-Type': 'application/json' } });
-        return response.data.options;
+        return response.data;
     };
 }
