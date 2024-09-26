@@ -3,6 +3,7 @@ import {
   ButtonBase,
   Card,
   CardContent,
+  CardMedia, // Add CardMedia for the image
   Grid,
   styled,
   Typography,
@@ -82,9 +83,7 @@ const ExperimentsPage: React.FC = () => {
   }, [client, brandClientTokenInfo]);
 
   const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(
-    null
-  );
+  const [selectedExperiment, setSelectedExperiment] = useState<string | null>(null);
   const cardRefs = useRef<HTMLDivElement[]>([]);
 
   const fetchExperiments = async () => {
@@ -342,6 +341,13 @@ const ExperimentsPage: React.FC = () => {
                     selected={selectedExperiment === experiments[index].id}
                     theme={theme}
                   >
+                    {/* Add the image to the card */}
+                    <CardMedia
+                      component="img"
+                      alt="Experiment Image"
+                      height="140"
+                      image={`https://picsum.photos/seed/${experiments[index].id}/400/600`}
+                    />
                     <CardContent>
                       <Typography variant="h6" component="div" sx={{ textAlign: "center" }}>
                         {experiments[index].id}

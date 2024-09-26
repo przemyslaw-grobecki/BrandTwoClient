@@ -78,6 +78,7 @@ const ArchivedExperimentsPage: React.FC = () => {
       try {
         await experimentsApi.DeleteExperiment(experimentId);
         setExperiments(experiments.filter((exp) => exp.id !== experimentId));
+        setSelectedExperiment(null); // Clear selected experiment after delete
         showAlert("Successfully deleted archived experiment. Data will no longer be accessible.", "success");
       } catch (error) {
         showAlert("Could not delete archived experiment. Try again later.", "error");
@@ -103,6 +104,34 @@ const ArchivedExperimentsPage: React.FC = () => {
         showAlert("Could not download the archived experiments data. Try again later.", "error");
       }
     }
+  };
+
+  const getFloatingActionButtons = () => {
+    const experiment = experiments.find((exp) => exp.id === selectedExperiment);
+    if (!experiment) return null;
+
+    return (
+      <>
+        <Zoom in={true}>
+          <Fab
+            color="primary"
+            aria-label="download"
+            onClick={() => handleDownloadData(experiment.id)}
+          >
+            <DownloadIcon />
+          </Fab>
+        </Zoom>
+        <Zoom in={true}>
+          <Fab
+            color="error"
+            aria-label="delete"
+            onClick={() => handleDeleteExperiment(experiment.id)}
+          >
+            <DeleteIcon />
+          </Fab>
+        </Zoom>
+      </>
+    );
   };
 
   // Animation for experiments
@@ -140,37 +169,32 @@ const ArchivedExperimentsPage: React.FC = () => {
                     />
                     <CardContent>
                       <Typography variant="h6" component="div" sx={{ textAlign: 'center' }}>
-                        {experiments[index].name}
+                        {experiments[index].id}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        Status: Archived
+                        Acquisition Mode: {experiments[index].acquisitionMode}
                       </Typography>
-
-                      {/* Action buttons inside the card */}
-                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, gap: 2 }}>
-                        <Tooltip title="Download Data">
-                          <Zoom in={true}>
-                            <Fab
-                              size="small"
-                              color="primary"
-                              onClick={() => handleDownloadData(experiments[index].id)}
-                            >
-                              <DownloadIcon />
-                            </Fab>
-                          </Zoom>
-                        </Tooltip>
-                        <Tooltip title="Delete Experiment">
-                          <Zoom in={true}>
-                            <Fab
-                              size="small"
-                              color="error"
-                              onClick={() => handleDeleteExperiment(experiments[index].id)}
-                            >
-                              <DeleteIcon />
-                            </Fab>
-                          </Zoom>
-                        </Tooltip>
-                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                        Device Count: {experiments[index].deviceIds.length}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                        Created At: {new Date(experiments[index].createdAt).toLocaleString()}
+                      </Typography>
+                      {experiments[index].startedAt && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                          Started At: {new Date(experiments[index].startedAt!).toLocaleString()}
+                        </Typography>
+                      )}
+                      {experiments[index].endedAt && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                          Ended At: {new Date(experiments[index].endedAt!).toLocaleString()}
+                        </Typography>
+                      )}
+                      {experiments[index].archivedAt && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                          Archived At: {new Date(experiments[index].archivedAt!).toLocaleString()}
+                        </Typography>
+                      )}
                     </CardContent>
                   </GlowCard>
                 </Box>
@@ -179,6 +203,20 @@ const ArchivedExperimentsPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          zIndex: 4,
+        }}
+      >
+        {getFloatingActionButtons()}
+      </Box>
     </div>
   );
 };
