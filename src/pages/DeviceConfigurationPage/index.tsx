@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -8,19 +8,22 @@ import {
   MenuItem,
   Button,
   ToggleButton,
-  ToggleButtonGroup,
   CssBaseline,
   Tooltip,
   Divider,
   IconButton,
+  Tabs,
+  Tab,
 } from "@mui/material";
+import WarningIcon from "@mui/icons-material/Warning";
+import ErrorIcon from "@mui/icons-material/Error";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { useParams } from "react-router-dom";
 import { useBrandClientContext } from "components/Providers/BrandClientContext";
 import { IDevicesApi } from "client/Devices/IDevicesApi";
 import { DeviceOption } from "client/Devices/DeviceOption";
 import { DeviceConfigurableOptionType as DeviceOptionType } from "client/Devices/DeviceOptionType";
-import { useTransition, animated } from "@react-spring/web";
 import LoadingScreen from "pages/LoadingPage";
 import { useTheme } from "@mui/material/styles";
 import { DeviceCommand } from "client/Devices/DeviceCommand";
@@ -37,6 +40,7 @@ const DeviceConfiguration: React.FC = () => {
   const [editDeviceType, setEditDeviceType] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0); // State for active group tab
   const { showAlert } = useAlert();
   const theme = useTheme();
 
@@ -121,36 +125,48 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  // Update tempConfigValues and track changes in changedConfigValues
-  const handleOptionChange = (optionId: string, newValue: string) => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue); // Update active group tab
+  };
+
+  const handleSliderChange = useCallback((optionId: string, newValue: string) => {
+    setTempConfigValues((prevValues) => ({
+      ...prevValues,
+      [optionId]: newValue,
+    }));
+  }, []);
+
+  const handleSliderCommit = useCallback((optionId: string, newValue: string) => {
+    setChangedConfigValues((prevChangedValues) => ({
+      ...prevChangedValues,
+      [optionId]: newValue,
+    }));
+  }, []);
+
+  const handleOptionChange = useCallback((optionId: string, newValue: string) => {
     setTempConfigValues((prevValues) => ({
       ...prevValues,
       [optionId]: newValue,
     }));
 
-    // Track only the changed values
     setChangedConfigValues((prevChangedValues) => ({
       ...prevChangedValues,
       [optionId]: newValue,
     }));
-  };
+  }, []);
 
   const handleSaveConfiguration = async () => {
     if (devicesApi != null && deviceId != null) {
       try {
-        // Send only the changed options
         const updatedOptions: DeviceOption[] = await devicesApi.EditDeviceOptions(deviceId, changedConfigValues);
 
-        // Update the deviceConfigOptions with the new values from the server
         setDeviceConfigOptions((prevOptions) => {
-          // Merge updated options with existing ones
           return prevOptions.map((option) => {
             const updatedOption = updatedOptions.find((updated) => updated.id === option.id);
             return updatedOption ? { ...option, value: updatedOption.value } : option;
           });
         });
 
-        // Clear the changed config values and temp config values after saving successfully
         setChangedConfigValues({});
 
         showAlert("Configuration successfully edited!", "success");
@@ -173,14 +189,6 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  const transitions = useTransition(deviceConfigOptions, {
-    from: { opacity: 0, transform: "translateY(20px)" },
-    enter: { opacity: 1, transform: "translateY(0px)" },
-    leave: { opacity: 0, transform: "translateY(20px)" },
-    keys: deviceConfigOptions.map((option) => option.id),
-  });
-
-  // Handle button clicks for commands
   const handleCommandClick = async (command: DeviceCommand) => {
     if (devicesApi != null && deviceId != null) {
       try {
@@ -192,7 +200,6 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  // Handle the refresh action
   const handleRefresh = async () => {
     if (devicesApi != null && deviceId != null) {
       try {
@@ -205,7 +212,6 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  // Handle individual option refresh button click
   const handleOptionRefresh = (optionId: string) => {
     showAlert(`Option ${optionId} refreshed.`, "success");
   };
@@ -225,6 +231,7 @@ const DeviceConfiguration: React.FC = () => {
   if (error) return <Typography color="error">{error}</Typography>;
 
   const groupedOptions = groupOptionsByGroup(deviceConfigOptions);
+  const groupNames = Object.keys(groupedOptions);
 
   return (
     <>
@@ -249,66 +256,45 @@ const DeviceConfiguration: React.FC = () => {
             color: "black",
           }}
         >
-          <Typography variant="h4" gutterBottom sx={{ color: "#2a5298", fontWeight: "bold" }}>
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{ color: "#2a5298", fontWeight: "bold" }}
+          >
             Configure Device: {deviceId}
           </Typography>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" sx={{ color: "#2a5298" }}>
-              Device Type
-            </Typography>
-            {editDeviceType ? (
-              <TextField
-                select
-                fullWidth
-                label="Device Type"
-                value={deviceType}
-                onChange={(e) => handleDeviceTypeChange(Number(e.target.value))}
-                variant="outlined"
-                sx={{ backgroundColor: "#fff", borderRadius: "5px" }}
-              >
-                <MenuItem value={0}>Brand Device</MenuItem>
-                <MenuItem value={1}>Pressure Sensor</MenuItem>
-                <MenuItem value={2}>Mock Device</MenuItem>
-              </TextField>
-            ) : (
-              <Typography variant="body1">
-                {deviceType === 0 && "Brand Device"}
-                {deviceType === 1 && "Pressure Sensor"}
-                {deviceType === 2 && "Mock Device"}
-              </Typography>
-            )}
-            <Button
-              variant="text"
-              onClick={() => setEditDeviceType((prev) => !prev)}
-              sx={{ mt: 1, color: theme.palette.primary.main }}
-            >
-              {editDeviceType ? "Cancel" : "Change Device Type"}
-            </Button>
-          </Box>
-          {Object.entries(groupedOptions).map(([groupName, options]) => (
-            <Box key={groupName} sx={{ mb: 4 }}>
-              <Typography variant="h5" sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}>
-                {groupName}
-              </Typography>
-              {transitions((style, option) => (
-                <animated.div style={{ padding: '10px' }}>
-                  <Box
-                  sx={{
-                    mb: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    borderRadius: '10px',
-                    padding: '10px',
-                    boxShadow: `0 0 10px ${theme.palette.primary.main}`,
-                    ':hover': {
-                      boxShadow: `0 0 15px ${theme.palette.primary.main}`,
-                    },
-                    position: 'relative'
-                  }}
+
+          {/* Tabs to switch between groups */}
+          <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+            {groupNames.map((groupName, index) => (
+              <Tab key={groupName} label={groupName} />
+            ))}
+          </Tabs>
+
+          {/* Only render the options of the active group */}
+          {groupNames.map((groupName, index) =>
+            index === activeTab ? (
+              <Box key={groupName} sx={{ mb: 4 }}>
+                <Typography
+                  variant="h5"
+                  sx={{ color: "#2a5298", fontWeight: "bold", mb: 2 }}
                 >
-                    <Box sx={{ flex: 1 }}>
+                  {groupName}
+                </Typography>
+
+                {groupedOptions[groupName].map((option) => (
+                  <Box
+                    key={option.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                      position: "relative",
+                    }}
+                  >
+                    {/* Left Section: Name and Description (Vertical Layout) */}
+                    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
                       <Typography
                         variant="h6"
                         gutterBottom
@@ -316,47 +302,55 @@ const DeviceConfiguration: React.FC = () => {
                       >
                         {option.name}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        gutterBottom
-                      >
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
                         {option.description}
                       </Typography>
                     </Box>
-                    <Box
-                      sx={{
-                        flex: 2,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                      }}
-                    >
-                      {renderConfigurableOption(
-                        option,
-                        tempConfigValues[option.id],
-                        handleOptionChange
+
+                    {/* Right Section: Memoized Option, Button, and Conditional Icon */}
+                    <Box sx={{ flex: 2, display: "flex", alignItems: "center", marginLeft: "auto", gap: 2 }}>
+                      <MemoizedOption
+                        key={option.id}
+                        option={option}
+                        currentValue={tempConfigValues[option.id]}
+                        handleChange={handleOptionChange}
+                        handleSliderChange={handleSliderChange}
+                        handleSliderCommit={handleSliderCommit}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOptionRefresh(option.id)}
+                        color="primary"
+                        sx={{ marginLeft: "auto" }}
+                      >
+                        <RefreshIcon />
+                      </IconButton>
+
+                      {/* Conditional Rendering of Icons based on the option's value */}
+                      {option.value.toLowerCase() === "unknown" && (
+                        <Tooltip title="Option is undefined">
+                          <WarningIcon sx={{ color: "orange" }} />
+                        </Tooltip>
+                      )}
+                      {option.value.toLowerCase() === "error" && (
+                        <Tooltip title="Option is in fault state">
+                          <ErrorIcon sx={{ color: "red" }} />
+                        </Tooltip>
+                      )}
+                      {option.value &&
+                        option.value.toLowerCase() !== "unknown" &&
+                        option.value.toLowerCase() !== "error" && (
+                        <Tooltip title="Option is correctly synced">
+                          <CheckCircleIcon sx={{ color: "green" }} />
+                        </Tooltip>
                       )}
                     </Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOptionRefresh(option.id)}
-                      color="primary"
-                      sx={{
-                        position: "absolute",
-                        right: "10px",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                      }}
-                    >
-                      <RefreshIcon />
-                    </IconButton>
                   </Box>
-                </animated.div>
-              ))}
-            </Box>
-          ))}
-          {/* Render Command Buttons */}
+                ))}
+              </Box>
+            ) : null
+          )}
+
           <Box sx={{ mt: 2 }}>
             <Typography variant="h6" sx={{ color: "#2a5298" }}>
               Device Commands
@@ -375,9 +369,7 @@ const DeviceConfiguration: React.FC = () => {
               ))}
             </Box>
           </Box>
-          <Divider sx={{ my: 4 }} />{" "}
-          {/* Adds a horizontal line for separation */}
-          {/* Add a Refresh Button */}
+          <Divider sx={{ my: 4 }} />
           <Box sx={{ mt: 2 }}>
             <Button
               variant="outlined"
@@ -386,7 +378,7 @@ const DeviceConfiguration: React.FC = () => {
                 color: "#2a5298",
                 borderColor: "#2a5298",
               }}
-              onClick={handleRefresh} // Trigger refresh
+              onClick={handleRefresh}
             >
               Refresh Configuration
             </Button>
@@ -404,55 +396,99 @@ const DeviceConfiguration: React.FC = () => {
   );
 };
 
+// Memoized rendering of individual configurable options
+const MemoizedOption = React.memo(
+  ({
+    option,
+    currentValue,
+    handleChange,
+    handleSliderChange,
+    handleSliderCommit,
+  }) => {
+    return renderConfigurableOption(
+      option,
+      currentValue,
+      handleChange,
+      handleSliderChange,
+      handleSliderCommit
+    );
+  }
+);
+
 // Function to render the configurable option UI based on the option type
 const renderConfigurableOption = (
   option: DeviceOption,
   currentValue: string,
-  onChange: (id: string, value: string) => void
+  onChange: (id: string, value: string) => void,
+  handleSliderChange: (id: string, value: string) => void,
+  handleSliderCommit: (id: string, value: string) => void
 ) => {
+  const isErrorOrUndefined =
+    currentValue === "Undefined" || currentValue === "ERROR";
+
   switch (option.optionType) {
     case DeviceOptionType.SWITCH:
       const switchValues = option.availableValues.split(";");
       return (
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-          <Typography>{switchValues[0]}</Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
+          <Typography
+            sx={isErrorOrUndefined ? { color: "red", fontWeight: "bold" } : {}}
+          >
+            {switchValues[0]}
+          </Typography>
           <Switch
             checked={currentValue === switchValues[1]}
             onChange={(e) =>
-              onChange(option.id, e.target.checked ? switchValues[1] : switchValues[0])
+              onChange(
+                option.id,
+                e.target.checked ? switchValues[1] : switchValues[0]
+              )
             }
           />
-          <Typography>{switchValues[1]}</Typography>
+          <Typography
+            sx={isErrorOrUndefined ? { color: "red", fontWeight: "bold" } : {}}
+          >
+            {switchValues[1]}
+          </Typography>
         </Box>
       );
 
     case DeviceOptionType.RANGE:
-      const [min, max, step] = option.availableValues.split(/[-\[\]]/).map(Number);
-      const handleRangeChange = (value: string | number, fromInput = false) => {
-        const numValue = Number(value);
-        const clampedValue = Math.min(Math.max(numValue, min), max);
-        onChange(option.id, clampedValue.toString());
-        if (fromInput) {
-          e.target.value = clampedValue.toString(); // Update input field with clamped value
-        }
-      };
+      const [min, max, step] = option.availableValues
+        .split(/[-\[\]]/)
+        .map(Number);
       return (
-        <Box sx={{ display: "flex", alignItems: "center", width: "100%", gap: 1 }}>
+        <Box
+          sx={{ display: "flex", alignItems: "center", width: "100%", gap: 5 }}
+        >
           <TextField
             value={currentValue}
+            error={isErrorOrUndefined}
+            helperText={isErrorOrUndefined && currentValue}
             type="number"
-            onChange={(e) => handleRangeChange(e.target.value, true)}
-            inputProps={{ min, max, step }}
-            sx={{ width: "100px" }} // Increased width for 4-digit numbers
+            onChange={(e) => handleSliderChange(option.id, e.target.value)}
+            onBlur={(e) => handleSliderCommit(option.id, e.target.value)} // Persist onBlur
+            sx={{ width: "100px" }} // Add padding to the left
           />
           <Slider
             value={Number(currentValue)}
             min={min}
             max={max}
             step={step}
-            onChange={(e, newValue) => handleRangeChange(newValue)}
+            onChange={(e, newValue) =>
+              handleSliderChange(option.id, newValue.toString())
+            }
+            onChangeCommitted={(e, newValue) =>
+              handleSliderCommit(option.id, newValue.toString())
+            } // Persist on slider commit
+            sx={isErrorOrUndefined ? { borderColor: "red", borderWidth: 2 } : {}}
             valueLabelDisplay="auto"
-            sx={{ flexGrow: 1, marginRight: 6, marginLeft: 6 }} // Leave space before refresh button
           />
         </Box>
       );
@@ -496,7 +532,9 @@ const renderConfigurableOption = (
               key={index}
               selected={bit === "1"}
               value={bit}
-              onClick={() => handleBinaryToggle(option.id, binaryValue, index, onChange)}
+              onClick={() =>
+                handleBinaryToggle(option.id, binaryValue, index, onChange)
+              }
             >
               {bit}
             </ToggleButton>
