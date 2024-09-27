@@ -2,6 +2,7 @@ export type AcquisitionConfiguration = {
     id: string;
     name: string;
     outputDirectory: string;
+    maxOutputFileSize: number;
     outputMode: number;
     windWidth: number;
     windOffset: number;

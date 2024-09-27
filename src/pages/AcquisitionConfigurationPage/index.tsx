@@ -183,6 +183,16 @@ const AcquisitionConfigurationPage: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  label="Max output file size"
+                  fullWidth
+                  value={selectedConfiguration.maxOutputFileSize}
+                  onChange={(e) => handleFieldChange('maxOutputFileSize', e.target.value)}
+                  variant="outlined"
+                  sx={{ backgroundColor: '#fff', borderRadius: '5px' }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
                   label="Output Mode"
                   type="number"
                   fullWidth

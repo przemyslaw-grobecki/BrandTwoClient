@@ -1,5 +1,6 @@
 export type AcquisitionConfigurationPatch = {
     name: string | undefined;
+    maxOutputFileSize: number | undefined;
     outputDirectory: string | undefined;
     outputMode: number | undefined;
     windWidth: number | undefined;
