@@ -18,6 +18,11 @@ export class DevicesApi implements IDevicesApi {
         });
     }
 
+    RefreshDeviceOption: (deviceId: string, optionId: string) => Promise<DeviceOption> = async (deviceId: string, optionId: string) => {
+        var response = await this.devicesAxiosClient.post(`/${deviceId}/Options/${optionId}/Refresh`);
+        return response.data;
+    };
+
     RenameDevice: (deviceId: string, newDeviceName: string) => Promise<Device> = async (deviceId: string, newDeviceName: string) => {
         var response = await this.devicesAxiosClient.post(`/${deviceId}` + '/Rename', { newDeviceName: newDeviceName });
         return response.data

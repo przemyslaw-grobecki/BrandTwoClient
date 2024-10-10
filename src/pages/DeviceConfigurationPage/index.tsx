@@ -258,8 +258,32 @@ const DeviceConfiguration: React.FC = () => {
     }
   };
 
-  const handleOptionRefresh = (optionId: string) => {
-    showAlert(`Option ${optionId} refreshed.`, "success");
+  const handleOptionRefresh = async (optionId: string) => {
+    if (devicesApi != null && deviceId != null) {
+      try {
+        // Fetch the updated option
+        const updatedOption: DeviceOption = await devicesApi.RefreshDeviceOption(deviceId, optionId);
+  
+        // Update the state for the refreshed option
+        setDeviceConfigOptions((prevOptions) =>
+          prevOptions.map((option) =>
+            option.id === optionId ? { ...option, value: updatedOption.value } : option
+          )
+        );
+  
+        // Optionally, you can also update tempConfigValues to keep the UI consistent
+        setTempConfigValues((prevValues) => ({
+          ...prevValues,
+          [optionId]: updatedOption.value,
+        }));
+  
+        // Show a success alert to indicate that the option was refreshed
+        showAlert("Successfully refreshed device option.", "success");
+      } catch (error) {
+        // Show an error alert if the refresh fails
+        showAlert("Failed to refresh device option.", "error");
+      }
+    }
   };
 
   const groupOptionsByGroup = (options: DeviceOption[]) => {
