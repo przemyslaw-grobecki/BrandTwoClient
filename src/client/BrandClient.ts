@@ -71,7 +71,7 @@ export class BrandClient implements IAuthenticationApi {
     email: string,
     password: string
   ) => {
-    var response = await axios.post(this.gatewayPath + "/register", {
+    var response = await axios.post(this.gatewayPath + "/identity/register", {
       email: email,
       password: password,
     });

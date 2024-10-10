@@ -358,9 +358,10 @@ const DeviceConfiguration: React.FC = () => {
                   },
                 }}
               >
-                <MenuItem value={0}>Brand Device</MenuItem>
+                <MenuItem value={0}>Trigger Tracking Sensor Module</MenuItem>
                 <MenuItem value={1}>Pressure Sensor</MenuItem>
                 <MenuItem value={2}>Mock Device</MenuItem>
+                <MenuItem value={3}>Vacuum Sensor Module</MenuItem>
               </TextField>
             ) : (
               <Typography
@@ -374,9 +375,10 @@ const DeviceConfiguration: React.FC = () => {
                   color: "#333",
                 }}
               >
-                {deviceType === 0 && "Brand Device"}
+                {deviceType === 0 && "Trigger Tracking Sensor Module"}
                 {deviceType === 1 && "Pressure Sensor"}
                 {deviceType === 2 && "Mock Device"}
+                {deviceType === 3 && "Vacuum Sensor Module"}
               </Typography>
             )}
 

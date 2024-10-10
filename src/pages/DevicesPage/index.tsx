@@ -244,7 +244,7 @@ const DevicesPage: React.FC = () => {
   });
 
   // Function to get image based on device type
-  const getImageForDeviceType = (type: number) => {
+  const getImageForDeviceType = (type: number, id: string) => {
     switch (type) {
       case 7:
         return '/src/assets/images/acquisition.jpg';
@@ -254,8 +254,10 @@ const DevicesPage: React.FC = () => {
         return '/src/assets/images/vacuum_meter.jpg'; // Replace with the correct path
       case 2:
         return '/src/assets/images/mock_device.png';
+      case 3:
+        return '/src/assets/images/vacuum.jpg'
       default:
-        return `https://picsum.photos/seed/${type}/400/600`; // Default image
+        return `https://picsum.photos/seed/${id}/400/600`; // Default image
     }
   };
 
@@ -328,7 +330,7 @@ const DevicesPage: React.FC = () => {
                         component="img"
                         alt="Device Image"
                         height="140"
-                        image={getImageForDeviceType(devices[index].type)} // Use the function to get image
+                        image={getImageForDeviceType(devices[index].type, devices[index].deviceId)} // Use the function to get image
                       />
                     </GlowCard>
                   </Box>
